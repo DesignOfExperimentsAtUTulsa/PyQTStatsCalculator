@@ -3,13 +3,68 @@
 
 #Import 
 import sys
-from PyQt.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
+from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
                              QFileDialog, QLabel, QSlider, QCheckBox, 
                              QLineEdit, QVBoxLayout, QApplication, QPushButton,
-                             QTableWidget, QTableWidgetItem)
-from PyQt.QtCore import Qt, QTimer, QCoreApplication
+                             QTableWidget, QTableWidgetItem,QSizePolicy)
+from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 
 import numpy as np
+
+import random
+ 
+from matplotlib.backends import qt_compat
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+
+
+class MyMplCanvas(FigureCanvas):
+    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+
+        self.compute_initial_figure()
+
+        FigureCanvas.__init__(self, fig)
+        self.setParent(parent)
+
+        FigureCanvas.setSizePolicy(self,
+                                   QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+
+    def compute_initial_figure(self):
+        pass
+
+class MyStaticMplCanvas(MyMplCanvas):
+    """Simple static canvas from matplotlib with a sine plot."""
+    def compute_initial_figure(self):
+        t = arange(0.0, 3.0, 0.01)
+        s = sin(2*pi*t)
+        self.axes.plot(t, s)
+
+
+class MyDynamicMplCanvas(MyMplCanvas):
+    """A canvas that updates itself frequently with a new plot."""
+    def __init__(self, *args, **kwargs):
+        MyMplCanvas.__init__(self, *args, **kwargs)
+        
+    def compute_initial_figure(self):
+        pass
+    
+    def plot_histogram(self,data_array,bins=50):
+        self.axes.cla()
+        self.axes.hist(data_array,bins=bins,normed=True)
+        self.draw()
+        
+    def plot_normal(self,mu,sigma):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
+        self.axes.plot(x,mlab.normpdf(x, mu, sigma))
+        self.draw()
 
 class StatCalculator(QWidget):
 
@@ -24,32 +79,30 @@ class StatCalculator(QWidget):
         #Builds GUI
         self.setGeometry(200,200,500,500)
 
-        b1 = QWidget()
-        self.load_button = QPushButton(b1)
-        self.load_button.setText('Load Data')
+        self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.load_data)
-        
-        b2 = QWidget()
-        self.stats_button = QPushButton(b1)
-        self.stats_button.setText('Compute Statistics')
-        self.stats_button.clicked.connect(self.compute_stats)
-        
+     
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
+        self.std_label = QLabel("Std Dev: Not Computed Yet",self)
         
         #Set up a Table to display data
         self.data_table = QTableWidget()
         self.data_table.itemSelectionChanged.connect(self.compute_stats)
         
+        self.main_widget = QWidget(self)
+        self.graph_canvas = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
+        
         #Define where the widgets go in the window        
         v_layout = QVBoxLayout()
         
         v_layout.addWidget(self.load_button)
-        v_layout.addWidget(self.stats_button)
         v_layout.addWidget(self.data_table)
         v_layout.addWidget(self.mean_label)
+        v_layout.addWidget(self.std_label)
+        v_layout.addWidget(self.graph_canvas)
         
         self.setLayout(v_layout)
-        self.setWindowTitle('Introduction to Descriptive Statistics')
+        self.setWindowTitle('Introduction to Descriptive Statistics - Dr. Daily\'s Example')
         self.activateWindow()
         self.raise_()
         self.show()
@@ -96,8 +149,14 @@ class StatCalculator(QWidget):
                 pass
         data_array = np.asarray(item_list)
         mean_value = np.mean(data_array)
+        stdev_value = np.std(data_array)
+        
         print("Mean = {0:5f}".format(mean_value))
         self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
+        self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+        
+        self.graph_canvas.plot_histogram(data_array)
+        self.graph_canvas.plot_normal(mean_value,stdev_value)
 '''       
 Assignment: 
 1. Add all the quantities from the MS Excel descriptive Statistics 
