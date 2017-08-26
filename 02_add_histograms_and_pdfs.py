@@ -6,8 +6,10 @@ import sys
 from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
                              QFileDialog, QLabel, QSlider, QCheckBox, 
                              QLineEdit, QVBoxLayout, QApplication, QPushButton,
-                             QTableWidget, QTableWidgetItem,QSizePolicy)
+                             QTableWidget, QTableWidgetItem,QSizePolicy,
+                             QGridLayout,QGroupBox)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
+from PyQt5.QtGui import QIcon
 
 import numpy as np
 
@@ -16,18 +18,20 @@ import random
 from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 
+from matplotlib import rcParams
+rcParams.update({'figure.autolayout': True})
 
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
+        #fig.autolayout = True
         self.axes = fig.add_subplot(111)
-
-        self.compute_initial_figure()
-
+        
+   
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
 
@@ -36,36 +40,40 @@ class MyMplCanvas(FigureCanvas):
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def compute_initial_figure(self):
-        pass
-
-class MyStaticMplCanvas(MyMplCanvas):
-    """Simple static canvas from matplotlib with a sine plot."""
-    def compute_initial_figure(self):
-        t = arange(0.0, 3.0, 0.01)
-        s = sin(2*pi*t)
-        self.axes.plot(t, s)
-
 
 class MyDynamicMplCanvas(MyMplCanvas):
     """A canvas that updates itself frequently with a new plot."""
     def __init__(self, *args, **kwargs):
         MyMplCanvas.__init__(self, *args, **kwargs)
+        self.axes.set_xlabel("X Label")
+        self.axes.set_ylabel("Y Label")
+        self.axes.set_title("Title")
+        self.axes.autoscale_view(tight=True)
+        #self.axes.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
         
-    def compute_initial_figure(self):
-        pass
-    
-    def plot_histogram(self,data_array,bins=50):
-        self.axes.cla()
-        self.axes.hist(data_array,bins=bins,normed=True)
+    def plot_histogram(self,data_array,data_label="Temperature",
+                       title="Probability Density Function Plots",bins=50):
+        self.axes.cla() #Clear axes
+        self.axes.hist(data_array,bins=bins,
+                       normed=True,label="Emperical",
+                       edgecolor='b',color='y')
+        self.axes.set_xlabel(data_label)
+        self.axes.set_ylabel("Estimated Prob. Density Funct.")
+        self.axes.set_title(title)
+        self.axes.legend(shadow=True)
         self.draw()
+        print("Finished Drawing Normalized Histogram.")
+        
         
     def plot_normal(self,mu,sigma):
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
-        self.axes.plot(x,mlab.normpdf(x, mu, sigma))
+        y = mlab.normpdf(x, mu, sigma)
+        self.axes.plot(x,y,label="Normal")
+        self.axes.legend(shadow=True)
         self.draw()
-
+        print("Finished Drawing Normal Distribution.")
+        
 class StatCalculator(QWidget):
 
     def __init__(self):
@@ -77,7 +85,7 @@ class StatCalculator(QWidget):
 
     def init_ui(self):
         #Builds GUI
-        self.setGeometry(200,200,500,500)
+        self.setGeometry(200,200,1000,500)
 
         self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.load_data)
@@ -92,16 +100,57 @@ class StatCalculator(QWidget):
         self.main_widget = QWidget(self)
         self.graph_canvas = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
         
-        #Define where the widgets go in the window        
-        v_layout = QVBoxLayout()
+        #Define where the widgets go in the window
+        #We start by defining some boxes that we can arrange
         
-        v_layout.addWidget(self.load_button)
-        v_layout.addWidget(self.data_table)
-        v_layout.addWidget(self.mean_label)
-        v_layout.addWidget(self.std_label)
-        v_layout.addWidget(self.graph_canvas)
         
-        self.setLayout(v_layout)
+        #Create a GUI box to put all the table and data widgets in
+        table_box = QGroupBox("Data Table")
+        #Create a layout for that box using the vertical
+        table_box_layout = QVBoxLayout()
+        #Add the widgets into the layout
+        table_box_layout.addWidget(self.load_button)
+        table_box_layout.addWidget(self.data_table)
+        #setup the layout to be displayed in the box
+        table_box.setLayout(table_box_layout)
+        
+        #repeat the box layout for Statistics
+        stats_box = QGroupBox("Summary Statistics")
+        stats_box_layout = QVBoxLayout()
+        stats_box_layout.addWidget(self.mean_label)
+        stats_box_layout.addWidget(self.std_label)
+        stats_box.setLayout(stats_box_layout)
+
+        #Ignore the box creation for now, since the graph box would just have 1 widget
+        #graph_box = QGroupBox("Data and Probability Graph")
+        
+        
+        #Create some distribution options
+        #Start with creating a check button.
+        self.normal_checkbox = QCheckBox('Normal Distribution',self)
+        # We want to run the plotting routine for the distribution, but 
+        # we need to know the statistical values, so we'll calculate statistics
+        # first.
+        self.normal_checkbox.stateChanged.connect(self.compute_stats)
+        
+        #Repeat for additional distributions.
+        self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
+        
+        distribution_box = QGroupBox("Distribution Functions")
+        distribution_box_layout= QVBoxLayout()
+        distribution_box_layout.addWidget(self.normal_checkbox)
+        distribution_box_layout.addWidget(self.log_normal_checkbox)
+        distribution_box.setLayout(distribution_box_layout)
+
+        #Now we can set all the previously defined boxes into the main window
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(table_box,0,0) 
+        grid_layout.addWidget(stats_box,1,0)
+        grid_layout.addWidget(self.graph_canvas,0,1) 
+        grid_layout.addWidget(distribution_box,1,1)
+        
+        self.setLayout(grid_layout)
+        
         self.setWindowTitle('Introduction to Descriptive Statistics - Dr. Daily\'s Example')
         self.activateWindow()
         self.raise_()
@@ -116,7 +165,7 @@ class StatCalculator(QWidget):
             self.data_lines = data_file.readlines()
         
        print("Opened {}".format(data_file_name))
-       print(self.data_lines[1:10])
+       print(self.data_lines[1:10]) #for debugging only
         
        #Set the headers
        #parse the lines by stripping the newline character off the end
@@ -147,22 +196,32 @@ class StatCalculator(QWidget):
                 item_list.append(float(item.text()))
             except:
                 pass
-        data_array = np.asarray(item_list)
-        mean_value = np.mean(data_array)
-        stdev_value = np.std(data_array)
         
-        print("Mean = {0:5f}".format(mean_value))
-        self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
-        self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+        if len(item_list) > 1: #Check to see if there are 2 or more samples
+            data_array = np.asarray(item_list)
+            mean_value = np.mean(data_array)
+            stdev_value = np.std(data_array)
+            
+            print("Mean = {0:5f}".format(mean_value))
+            self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
+            self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+            
+            self.graph_canvas.plot_histogram(data_array)
+            if self.normal_checkbox.isChecked():
+                self.graph_canvas.plot_normal(mean_value,stdev_value)
+                #add more distributions here
         
-        self.graph_canvas.plot_histogram(data_array)
-        self.graph_canvas.plot_normal(mean_value,stdev_value)
 '''       
-Assignment: 
-1. Add all the quantities from the MS Excel descriptive Statistics 
-add-in to automatically calculate and display. Demonstrate the results
-from this program match Excel. Use the same dataset.
-2. Add a dialog box to open and load any Comma Separated Values table. 
+  1. Add the ability to plot a normalized Histogram of the selected data in the table.
+  2. Add a menu option to open a CSV data file.
+  3. Add a checkbox for at least 5 distribution functions to plot over the top of the Histogram. 
+    a. Include a legend and appropriate labels on your graph.
+    b. Include axes labels. (Challenge: make the labels editable in your program).
+  4. Use a grid style layout for your GUI
+  5. Save the plot to a PDF when you double click on it.
+  6. Try to find one of the most obscure distributions as one of your 5. Please try to be different than everyone else. 
+  7. Print and turn in a screenshot of your GUI on one page. Be sure your name in in the window title.
+  8. Print and turn in the PDF file of the properly labeled Histogram with 2 distributions shown.
 '''
 
 if __name__ == '__main__':
