@@ -13,34 +13,45 @@ from PyQt5.QtGui import QIcon
 
 import numpy as np
 
-import random
+import os
  
 from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-#import matplotlib.pyplot as plt
+from matplotlib import rcParams
 import matplotlib.mlab as mlab
 
-from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
 
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        #fig.autolayout = True
-        self.axes = fig.add_subplot(111)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
         
-   
-        FigureCanvas.__init__(self, fig)
+        FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
 
         FigureCanvas.setSizePolicy(self,
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
-
-
+        FigureCanvas.mpl_connect(self,'button_press_event', self.export)
+        
+    def export(self,event):
+        filename = "ExportedGraph.pdf"
+        self.fig.savefig(filename)
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("Saved a copy of the graphics window to {}".format(filename))
+        #msg.setInformativeText("This is additional information")
+        msg.setWindowTitle("Saved PDF File")
+        msg.setDetailedText("The full path of the file is \n{}".format(os.path.abspath(os.getcwd())))
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setWindowModality(Qt.ApplicationModal)
+        msg.exec_()
+        print("Exported PDF file")
+        
 class MyDynamicMplCanvas(MyMplCanvas):
     """A canvas that updates itself frequently with a new plot."""
     def __init__(self, *args, **kwargs):
@@ -48,9 +59,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.set_xlabel("X Label")
         self.axes.set_ylabel("Y Label")
         self.axes.set_title("Title")
-        self.axes.autoscale_view(tight=True)
-        #self.axes.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
-        
+             
     def plot_histogram(self,data_array,data_label="Temperature",
                        title="Probability Density Function Plots",bins=50):
         self.axes.cla() #Clear axes
@@ -63,8 +72,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Normalized Histogram.")
-        
-        
+          
     def plot_normal(self,mu,sigma):
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
@@ -82,7 +90,6 @@ class StatCalculator(QWidget):
         # Upon startup, run a user interface routine
         self.init_ui()
               
-
     def init_ui(self):
         #Builds GUI
         self.setGeometry(200,200,1000,500)
@@ -103,7 +110,6 @@ class StatCalculator(QWidget):
         #Define where the widgets go in the window
         #We start by defining some boxes that we can arrange
         
-        
         #Create a GUI box to put all the table and data widgets in
         table_box = QGroupBox("Data Table")
         #Create a layout for that box using the vertical
@@ -123,7 +129,6 @@ class StatCalculator(QWidget):
 
         #Ignore the box creation for now, since the graph box would just have 1 widget
         #graph_box = QGroupBox("Data and Probability Graph")
-        
         
         #Create some distribution options
         #Start with creating a check button.
