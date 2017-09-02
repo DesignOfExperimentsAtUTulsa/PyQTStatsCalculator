@@ -3,11 +3,11 @@
 
 #Import 
 import sys
-from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
+from PyQt5.QtWidgets import (QMainWindow,QWidget, QTreeView, QMessageBox, QHBoxLayout, 
                              QFileDialog, QLabel, QSlider, QCheckBox, 
                              QLineEdit, QVBoxLayout, QApplication, QPushButton,
                              QTableWidget, QTableWidgetItem,QSizePolicy,
-                             QGridLayout,QGroupBox)
+                             QGridLayout,QGroupBox,qApp,)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 from PyQt5.QtGui import QIcon
 
@@ -81,17 +81,43 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Normal Distribution.")
-        
-class StatCalculator(QWidget):
+
+
+      
+class StatCalculator(QMainWindow):
 
     def __init__(self):
         super().__init__()
-
+        
         # Upon startup, run a user interface routine
         self.init_ui()
               
     def init_ui(self):
         #Builds GUI
+        self.statusBar().showMessage('Ready')
+
+        exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setStatusTip('Exit application')
+        exitAction.triggered.connect(qApp.quit)
+        
+        openFile = QAction(QIcon('open.png'), '&Open', self)
+        openFile.setShortcut('Ctrl+O')
+        openFile.setStatusTip('Open new File')
+        openFile.triggered.connect(self.load_data)
+        
+
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openFile)
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(exitAction)
+        
+        self.toolbar = self.addToolBar('Exit')
+        self.toolbar.addAction(exitAction)
+        
+        self.main_widget = QWidget(self)
+        
         self.setGeometry(200,200,1000,500)
 
         self.load_button = QPushButton('Load Data',self)
@@ -148,19 +174,20 @@ class StatCalculator(QWidget):
         distribution_box.setLayout(distribution_box_layout)
 
         #Now we can set all the previously defined boxes into the main window
-        grid_layout = QGridLayout()
+        grid_layout = QGridLayout(self.main_widget)
         grid_layout.addWidget(table_box,0,0) 
         grid_layout.addWidget(stats_box,1,0)
         grid_layout.addWidget(self.graph_canvas,0,1) 
         grid_layout.addWidget(distribution_box,1,1)
         
-        self.setLayout(grid_layout)
+        self.main_widget.setLayout(grid_layout)
+        self.setCentralWidget(self.main_widget)
         
         self.setWindowTitle('Introduction to Descriptive Statistics - Dr. Daily\'s Example')
-        self.activateWindow()
-        self.raise_()
+        #self.activateWindow()
+        #self.raise_()
         self.show()
-    
+        
     def load_data(self):        
        #for this example, we'll hard code the file name.
        data_file_name = "Historical Temperatures from Moose Wyoming.csv"
