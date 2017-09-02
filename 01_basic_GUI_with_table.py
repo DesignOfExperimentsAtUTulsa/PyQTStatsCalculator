@@ -16,10 +16,6 @@ from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout,
                              QTableWidget, QTableWidgetItem)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 from PyQt5 import QtGui, QtCore, QtWidgets
-from tkinter import filedialog
-from tkinter import *
-import subprocess
-import tkinter
 
 from scipy import stats
 import statistics
@@ -37,20 +33,6 @@ class StatCalculator(QWidget):
         
         #Builds GUI
         self.setGeometry(200,200,500,500)
-#==============================================================================
-#         
-#         #menu bar
-#         self.menu_bar=QtWidgets.QMenuBar(self)#QtWidgets.QMenuBar.addMenu(topmenu, 'Open')
-#         # file menu
-#         self.menu_file = QtWidgets.QMenu(self.menu_bar)
-#         self.menu_file.setTitle('File')
-#         self.menu_bar.addAction(self.menu_file.menuAction())
-# 
-#         # exit action
-#         self.menu_action_exit = QtWidgets.QAction(self)
-#         self.menu_action_exit.setText("Exit")
-#         self.menu_action_exit.triggered.connect(self.close)
-#==============================================================================
 
         b1 = QWidget()
         self.load_button = QPushButton(b1)
@@ -144,13 +126,9 @@ class StatCalculator(QWidget):
        print("Filled {} rows.".format(row))
         
     def choose_file(self):
-        root = Tk()
-        root.wantedfile =  filedialog.askopenfilename(initialdir = "C:\\" ,title = "Select file",filetypes = (("tab delineated",".csv"),("all files","*.*")))
-        #subprocess.Popen(r'explorer \select, "C:"')
-        try:
-            self.load_data(root.wantedfile)
-        except:
-            pass
+        fileNames, _filter = QtWidgets.QFileDialog.getOpenFileName(self)
+        print('{}'.format(fileNames))
+        self.load_data(fileNames)
     
     def compute_stats(self):
         
