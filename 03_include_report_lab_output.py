@@ -10,8 +10,12 @@ from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout,
                              QGridLayout,QGroupBox)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 from PyQt5.QtGui import QIcon
-
+from PyQt5 import QtWidgets
 import numpy as np
+from scipy import stats
+import statistics
+import math
+import collections
 
 import os
  
@@ -60,8 +64,9 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.set_ylabel("Y Label")
         self.axes.set_title("Title")
              
-    def plot_histogram(self,data_array,data_label="Temperature",
-                       title="Probability Density Function Plots",bins=50):
+    def plot_histogram(self,data_array,bins):
+        data_label="Temperature"
+        title="Probability Density Function Plots"
         self.axes.cla() #Clear axes
         self.axes.hist(data_array,bins=bins,
                        normed=True,label="Emperical",
@@ -82,8 +87,48 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.draw()
         print("Finished Drawing Normal Distribution.")
         
-class StatCalculator(QWidget):
-
+    def plot_contin(self, maxval, minval):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(minval,maxval, 100)
+        y=[]
+        for i in range(100):
+            y.append(1/(maxval-minval))
+        #y=sumvals/(maxval-minval)
+        self.axes.plot(x,y,label="Uniform")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Uniform Distribution.")
+        
+    def plot_triang(self, maxval, minval, modeval):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(minval,maxval, math.floor(maxval-minval))
+        y=[]
+        for i in range(math.floor(minval), math.floor(modeval)):
+            y.append(2*(i-minval)/(maxval-minval)/(modeval-minval))
+        for i in range(math.floor(modeval), math.floor(maxval)):
+            y.append(2*(maxval-i)/(maxval-minval)/(maxval-modeval))
+        #y=sumvals/(maxval-minval)
+        self.axes.plot(x,y,label="Triangular")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Triangular Distribution.")
+        
+    def plot_quad(self, maxval, minval):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(minval,maxval, math.floor(maxval-minval))
+        y=[]
+        alpha=12/(maxval-minval)**3
+        beta=(maxval+minval)/2
+        spread=math.floor(maxval)-math.floor(minval)
+        print('{}'.format(spread))
+        for i in range(0,spread):
+            y.append(alpha*((i+minval)-beta)**2)
+        self.axes.plot(x,y,label="U-Quadratic")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing U-Quadratic Distribution.")
+        
+class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -92,13 +137,42 @@ class StatCalculator(QWidget):
               
     def init_ui(self):
         #Builds GUI
-        self.setGeometry(200,200,1000,500)
+        self.setGeometry(200,200,1000,800)
+        main_widget=QWidget()
+        #majorWidget=QWidget()
+        self.setCentralWidget(main_widget)#(majorWidget)
+        
+        openFile = QtWidgets.QAction(QIcon('Open-icon.png'),'Open', self)
+        openFile.setShortcut('Ctrl+O')
+        openFile.setStatusTip('Open new File')
+        openFile.triggered.connect(self.openingFile)
 
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openFile)
+        self.setWindowTitle('Introduction to Descriptive Statistics - Austin V')
+        self.activateWindow()
+        self.raise_()
+        self.show()
+
+        #super().__init__()#super(StatCalculator, self).__init__(self)
         self.load_button = QPushButton('Load Data',self)
-        self.load_button.clicked.connect(self.load_data)
+        self.load_button.clicked.connect(self.simpLoad)
      
+#==============================================================================
+#         self.mean_label = QLabel("Mean: Not Computed Yet",self)
+#         self.std_label = QLabel("Std Dev: Not Computed Yet",self)
+#==============================================================================
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
-        self.std_label = QLabel("Std Dev: Not Computed Yet",self)
+        self.median_label = QLabel("Median: Not Computed Yet",self)
+        self.mode_label=QLabel("Mode: Not Computed Yet", self)
+        self.stdDev_label = QLabel("Standard Deviation: Not Computed Yet",self)
+        self.kurt_label=QLabel("Kurtosis: Not Computed Yet",self)
+        self.skew_label=QLabel("Skew: Not Computed Yet",self)
+        self.minVal_label=QLabel("Minimum: Not Computed Yet",self)
+        self.maxVal_label=QLabel("Maximum: Not Computed Yet",self)
+        self.range_label = QLabel("Range: Not Computed Yet",self)
+        self.sumT_label=QLabel("Sum: Not Computed Yet",self)
         
         #Set up a Table to display data
         self.data_table = QTableWidget()
@@ -123,8 +197,20 @@ class StatCalculator(QWidget):
         #repeat the box layout for Statistics
         stats_box = QGroupBox("Summary Statistics")
         stats_box_layout = QVBoxLayout()
+#==============================================================================
+#         stats_box_layout.addWidget(self.mean_label)
+#         stats_box_layout.addWidget(self.std_label)
+#==============================================================================
         stats_box_layout.addWidget(self.mean_label)
-        stats_box_layout.addWidget(self.std_label)
+        stats_box_layout.addWidget(self.median_label)
+        stats_box_layout.addWidget(self.mode_label)
+        stats_box_layout.addWidget(self.stdDev_label)
+        stats_box_layout.addWidget(self.kurt_label)
+        stats_box_layout.addWidget(self.skew_label)
+        stats_box_layout.addWidget(self.minVal_label)
+        stats_box_layout.addWidget(self.maxVal_label)
+        stats_box_layout.addWidget(self.range_label)
+        stats_box_layout.addWidget(self.sumT_label)
         stats_box.setLayout(stats_box_layout)
 
         #Ignore the box creation for now, since the graph box would just have 1 widget
@@ -140,11 +226,20 @@ class StatCalculator(QWidget):
         
         #Repeat for additional distributions.
         self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
+        self.contin_checkbox = QCheckBox('Uniform Distribution',self)
+        self.contin_checkbox.stateChanged.connect(self.compute_stats)
+        self.triang_checkbox = QCheckBox('Triangular Distribution',self)
+        self.triang_checkbox.stateChanged.connect(self.compute_stats)
+        self.quad_checkbox = QCheckBox('U-Quadratic Distribution',self)
+        self.quad_checkbox.stateChanged.connect(self.compute_stats)
         
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
         distribution_box_layout.addWidget(self.normal_checkbox)
         distribution_box_layout.addWidget(self.log_normal_checkbox)
+        distribution_box_layout.addWidget(self.contin_checkbox)
+        distribution_box_layout.addWidget(self.triang_checkbox)
+        distribution_box_layout.addWidget(self.quad_checkbox)
         distribution_box.setLayout(distribution_box_layout)
 
         #Now we can set all the previously defined boxes into the main window
@@ -153,46 +248,55 @@ class StatCalculator(QWidget):
         grid_layout.addWidget(stats_box,1,0)
         grid_layout.addWidget(self.graph_canvas,0,1) 
         grid_layout.addWidget(distribution_box,1,1)
+                
+        main_widget.setLayout(grid_layout)
+
+    def openingFile(self):
+        fname, _filter = QFileDialog.getOpenFileName(self, 'Open file', 'C:')
+        self.load_data(fname)
         
-        self.setLayout(grid_layout)
-        
-        self.setWindowTitle('Introduction to Descriptive Statistics - Dr. Daily\'s Example')
-        self.activateWindow()
-        self.raise_()
-        self.show()
-    
-    def load_data(self):        
-       #for this example, we'll hard code the file name.
-       data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+    def simpLoad(self):
+        #for this example, we'll hard code the file name.
+        #fileName = "Historical Temperatures from Moose Wyoming.csv"
+        self.load_data('Historical Temperatures from Moose Wyoming.csv')#fileName)
+           
+    def load_data(self, fileName):   
+       try:
+           self.data_table.setRowCount(0)
+       except:
+           pass
        header_row = 1 
-       #load data file into memory as a list of lines       
-       with open(data_file_name,'r') as data_file:
-            self.data_lines = data_file.readlines()
-        
-       print("Opened {}".format(data_file_name))
-       print(self.data_lines[1:10]) #for debugging only
-        
-       #Set the headers
-       #parse the lines by stripping the newline character off the end
-       #and then splitting them on commas.
-       data_table_columns = self.data_lines[header_row].strip().split(',')
-       self.data_table.setColumnCount(len(data_table_columns))
-       self.data_table.setHorizontalHeaderLabels(data_table_columns)
-        
-       #fill the table starting with the row after the header
-       current_row = -1
-       for row in range(header_row+1, len(self.data_lines)):
-           row_values = (self.data_lines[row].strip().split(','))
-           current_row +=1
-           self.data_table.insertRow(current_row)
-           #Populate the row with data
-           for col in range(len(data_table_columns)):
-               entry = QTableWidgetItem("{}".format(row_values[col]))
-               self.data_table.setItem(current_row,col,entry)
-       print("Filled {} rows.".format(row))
+       #load data file into memory as a list of lines
+       print('{}'.format(fileName))    
+       try:
+           with open(fileName,'r') as data_file:
+                self.data_lines = data_file.readlines()
+            
+           print("Opened {}".format(fileName))
+           print(self.data_lines[1:10]) #for debugging only
+            
+           #Set the headers
+           #parse the lines by stripping the newline character off the end
+           #and then splitting them on commas.
+           data_table_columns = self.data_lines[header_row].strip().split(',')
+           self.data_table.setColumnCount(len(data_table_columns))
+           self.data_table.setHorizontalHeaderLabels(data_table_columns)
+            
+           #fill the table starting with the row after the header
+           current_row = -1
+           for row in range(header_row+1, len(self.data_lines)):
+               row_values = (self.data_lines[row].strip().split(','))
+               current_row +=1
+               self.data_table.insertRow(current_row)
+               #Populate the row with data
+               for col in range(len(data_table_columns)):
+                   entry = QTableWidgetItem("{}".format(row_values[col]))
+                   self.data_table.setItem(current_row,col,entry)
+           print("Filled {} rows.".format(row))
+       except:
+           pass
     
     def compute_stats(self):
-        
         #setup array
         item_list=[]
         items = self.data_table.selectedItems()
@@ -204,18 +308,82 @@ class StatCalculator(QWidget):
         
         if len(item_list) > 1: #Check to see if there are 2 or more samples
             data_array = np.asarray(item_list)
+#==============================================================================
+#             mean_value = np.mean(data_array)
+#             stdev_value = np.std(data_array)
+#             
+#             print("Mean = {0:5f}".format(mean_value))
+#             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
+#             self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+#==============================================================================
+            data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
-            stdev_value = np.std(data_array)
+            medianVal=np.median(data_array)
+            sumT=sum(item_list)
+            length=len(item_list)
+            minVal=np.amin(data_array)
+            maxVal=np.amax(data_array)
+            rangeVal=maxVal-minVal
+            stdDev=np.std(data_array)
+            kurt=stats.kurtosis(data_array)
+            skew=stats.skew(data_array)
+            try:
+                modeVal, _=collections.Counter(data_array).most_common(1)#statistics.mode(data_array)
+                print("Mode {} rows.".format(modeVal))
+            except:
+                modeVal=0
+                pass
+                
+        if len(item_list)>2:
+            varVal=statistics.variance(item_list)
+        else:
+            varVal=0
             
-            print("Mean = {0:5f}".format(mean_value))
-            self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
-            self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+        try:
+            #first number ,n, in {n:pf} is index of call in format()
+            print("Mean = {0:8.6f} \tMedian= {1:8.6f} \tMode{3:4.1f}\tStandardDeviation= {2:8.6f}".format(mean_value, medianVal, stdDev, modeVal))
+            print("  Kurtosis= {0:8.6f}\tSkew= {1:8.6f}\tVariance= {2:8.6f}".format(kurt, skew, varVal))
+            print("  MinVal= {0:5.1f}\tMaxVal= {1:5.1f} \tRange= {2:5.1f}".format(minVal, maxVal, rangeVal))
+            print("  Items Selected:{0:5.0f} with total sum of values:{1:5.0f} ".format(length, sumT))
             
-            self.graph_canvas.plot_histogram(data_array)
+            self.mean_label.setText("Mean = {:0.6f}".format(mean_value))
+            self.median_label.setText("Median = {:0.6f}".format(medianVal))
+            self.mode_label.setText("Mode = {:0.6f}".format(modeVal))
+            self.stdDev_label.setText("StdDev = {:0.6f}".format(stdDev))
+            self.kurt_label.setText("Kurtosis= {:0.6f}".format(kurt))
+            self.skew_label.setText("Skew= {:0.6f}".format(skew))
+            self.minVal_label.setText("Minimum= {:0.1f}".format(minVal))
+            self.maxVal_label.setText("Maximum= {:0.1f}".format(maxVal))
+            self.range_label.setText("Range = {:0.1f}".format(rangeVal))
+            self.sumT_label.setText("Sum= {:0.1f}".format(sumT))
+            if length<100:
+                bins=math.floor(length/5)
+            else:
+                bins=50
+            self.graph_canvas.plot_histogram(data_array, bins)
             if self.normal_checkbox.isChecked():
-                self.graph_canvas.plot_normal(mean_value,stdev_value)
+                self.graph_canvas.plot_normal(mean_value,stdDev)
+            if self.contin_checkbox.isChecked():
+                self.graph_canvas.plot_contin(maxVal, minVal)
+            if self.triang_checkbox.isChecked():
+                self.graph_canvas.plot_triang(maxVal, minVal, modeVal)        
+            if self.quad_checkbox.isChecked():
+                self.graph_canvas.plot_quad(maxVal, minVal)  
                 #add more distributions here
+        except:
+            pass
         
+#==============================================================================
+#         if self.tdist_checkbox.isChecked():
+#             self.graph_canvas.plot_tdist()
+#         if self.poisBin_checkbox.isChecked():
+#             self.graph_canvas.plot_poisBin()
+#         if self.stdBin_checkbox.isChecked():
+#             self.graph_canvas.plot_stdBin(mean_value,stdDev)
+#==============================================================================
+
+        
+    
 '''       
   1. Add the ability to plot a normalized Histogram of the selected data in the table.
   2. Add a menu option to open a CSV data file.
