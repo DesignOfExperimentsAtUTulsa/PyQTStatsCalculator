@@ -15,7 +15,8 @@ import numpy as np
 from scipy import stats
 import statistics
 import math
-import collections
+#import collections
+import PyQt5
 
 import os
  
@@ -120,13 +121,30 @@ class MyDynamicMplCanvas(MyMplCanvas):
         alpha=12/(maxval-minval)**3
         beta=(maxval+minval)/2
         spread=math.floor(maxval)-math.floor(minval)
-        print('{}'.format(spread))
         for i in range(0,spread):
             y.append(alpha*((i+minval)-beta)**2)
         self.axes.plot(x,y,label="U-Quadratic")
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing U-Quadratic Distribution.")
+        
+    def plot_log(self,m,sd):
+        xmin,xmax = self.axes.get_xlim()
+        
+        v=sd**2
+        mu=np.log(m/(1+v/m**2)**0.5)
+        sigma=(np.log(1+v/m**2))**0.5
+        x = np.linspace(m-3*sd,m+3*sd, 100)
+        self.axes.plot(x,self.log_plot(x, mu, sigma),label="Log-Normal")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Log-Normal Distribution.")
+    def log_plot(self, value, mu, sigma):
+        coef=1/value/sigma/(2*math.pi)**0.5
+        expon=-1*(((np.log(value))-mu)**2)/(2*sigma**2)
+        calcedVal=coef*np.exp(expon)
+        #print('{0} {1} {2}'.format(coef, expon, calcedVal)) 
+        return calcedVal
         
 class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
     def __init__(self):
@@ -159,10 +177,6 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.simpLoad)
      
-#==============================================================================
-#         self.mean_label = QLabel("Mean: Not Computed Yet",self)
-#         self.std_label = QLabel("Std Dev: Not Computed Yet",self)
-#==============================================================================
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
         self.median_label = QLabel("Median: Not Computed Yet",self)
         self.mode_label=QLabel("Mode: Not Computed Yet", self)
@@ -197,10 +211,6 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         #repeat the box layout for Statistics
         stats_box = QGroupBox("Summary Statistics")
         stats_box_layout = QVBoxLayout()
-#==============================================================================
-#         stats_box_layout.addWidget(self.mean_label)
-#         stats_box_layout.addWidget(self.std_label)
-#==============================================================================
         stats_box_layout.addWidget(self.mean_label)
         stats_box_layout.addWidget(self.median_label)
         stats_box_layout.addWidget(self.mode_label)
@@ -225,7 +235,8 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         self.normal_checkbox.stateChanged.connect(self.compute_stats)
         
         #Repeat for additional distributions.
-        self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
+        self.log_checkbox = QCheckBox('Log-Normal Distribution',self)
+        self.log_checkbox.stateChanged.connect(self.compute_stats)
         self.contin_checkbox = QCheckBox('Uniform Distribution',self)
         self.contin_checkbox.stateChanged.connect(self.compute_stats)
         self.triang_checkbox = QCheckBox('Triangular Distribution',self)
@@ -236,7 +247,7 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
         distribution_box_layout.addWidget(self.normal_checkbox)
-        distribution_box_layout.addWidget(self.log_normal_checkbox)
+        distribution_box_layout.addWidget(self.log_checkbox)
         distribution_box_layout.addWidget(self.contin_checkbox)
         distribution_box_layout.addWidget(self.triang_checkbox)
         distribution_box_layout.addWidget(self.quad_checkbox)
@@ -267,7 +278,7 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
            pass
        header_row = 1 
        #load data file into memory as a list of lines
-       print('{}'.format(fileName))    
+       #print('{}'.format(fileName))    
        try:
            with open(fileName,'r') as data_file:
                 self.data_lines = data_file.readlines()
@@ -300,6 +311,7 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         #setup array
         item_list=[]
         items = self.data_table.selectedItems()
+        #items=allItems[~np.isnan(allItems)] #mask for nan, pull true vals into new array
         for item in items:
             try:
                 item_list.append(float(item.text()))
@@ -308,14 +320,6 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
         
         if len(item_list) > 1: #Check to see if there are 2 or more samples
             data_array = np.asarray(item_list)
-#==============================================================================
-#             mean_value = np.mean(data_array)
-#             stdev_value = np.std(data_array)
-#             
-#             print("Mean = {0:5f}".format(mean_value))
-#             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
-#             self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
-#==============================================================================
             data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
             medianVal=np.median(data_array)
@@ -328,10 +332,10 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
             kurt=stats.kurtosis(data_array)
             skew=stats.skew(data_array)
             try:
-                modeVal, _=collections.Counter(data_array).most_common(1)#statistics.mode(data_array)
-                print("Mode {} rows.".format(modeVal))
+                #print("Mode {} rows.".format(collections.Counter(data_array).most_common(1)))
+                modeVal=statistics.mode(data_array)
             except:
-                modeVal=0
+                modeVal=103
                 pass
                 
         if len(item_list)>2:
@@ -357,7 +361,7 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
             self.range_label.setText("Range = {:0.1f}".format(rangeVal))
             self.sumT_label.setText("Sum= {:0.1f}".format(sumT))
             if length<100:
-                bins=math.floor(length/5)
+                bins=math.floor(length/2)
             else:
                 bins=50
             self.graph_canvas.plot_histogram(data_array, bins)
@@ -365,22 +369,16 @@ class StatCalculator(QtWidgets.QMainWindow):#(QWidget):
                 self.graph_canvas.plot_normal(mean_value,stdDev)
             if self.contin_checkbox.isChecked():
                 self.graph_canvas.plot_contin(maxVal, minVal)
+            if self.quad_checkbox.isChecked():
+                self.graph_canvas.plot_quad(maxVal, minVal)
+            if self.log_checkbox.isChecked():
+                self.graph_canvas.plot_log(mean_value, stdDev)    
             if self.triang_checkbox.isChecked():
                 self.graph_canvas.plot_triang(maxVal, minVal, modeVal)        
-            if self.quad_checkbox.isChecked():
-                self.graph_canvas.plot_quad(maxVal, minVal)  
+
                 #add more distributions here
         except:
             pass
-        
-#==============================================================================
-#         if self.tdist_checkbox.isChecked():
-#             self.graph_canvas.plot_tdist()
-#         if self.poisBin_checkbox.isChecked():
-#             self.graph_canvas.plot_poisBin()
-#         if self.stdBin_checkbox.isChecked():
-#             self.graph_canvas.plot_stdBin(mean_value,stdDev)
-#==============================================================================
 
         
     
