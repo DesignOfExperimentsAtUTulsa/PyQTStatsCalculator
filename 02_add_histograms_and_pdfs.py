@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout,
                              QGridLayout,QGroupBox)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 from PyQt5.QtGui import QIcon
+from PyQt5 import QtWidgets
 
 import numpy as np
 
@@ -104,7 +105,7 @@ class StatCalculator(QWidget):
         self.data_table = QTableWidget()
         self.data_table.itemSelectionChanged.connect(self.compute_stats)
         
-        self.main_widget = QWidget(self)
+        self.main_widget = QtWidgets.QMainWindow(self)#QWidget(self)
         self.graph_canvas = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
         
         #Define where the widgets go in the window
