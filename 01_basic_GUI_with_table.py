@@ -46,7 +46,7 @@ class StatCalculator(QMainWindow):
         #Connect the signal to the slot. IN other words, whenever the selection of the table changes, compute stats.
         self.data_table.itemSelectionChanged.connect(self.compute_stats)
         
-        main_widget = QWidget()
+        
         #Define where the widgets go in the window        
         v_layout = QVBoxLayout()
         
@@ -111,8 +111,7 @@ class StatCalculator(QMainWindow):
                 item_list.append(float(item.text()))
             except: #some items may not be able to convert to a float.
                 pass
-        #check to see if anything is in the list
-        if len(item_list) > 0:
+        if len(item_list) > 1: #Check to see if there are 2 or more samples
             #convert to an array for further analysis
             data_array = np.asarray(item_list)
 
