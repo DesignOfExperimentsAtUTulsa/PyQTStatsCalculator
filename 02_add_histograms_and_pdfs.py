@@ -14,7 +14,8 @@ from matplotlib.figure import Figure
 import matplotlib.mlab as mlab
 import math
 
-global HEADER_ROW, BUTTON_FONT, LABEL_FONT, X_AXIS_LABEL, DEGREES_OF_FREEDOM, ALPHA_ALPHA, ALPHA_BETA, BETA
+global HEADER_ROW, BUTTON_FONT, LABEL_FONT, X_AXIS_LABEL, DEGREES_OF_FREEDOM, ALPHA_ALPHA, ALPHA_BETA, BETA, startingUp
+startingUp = True
 HEADER_ROW = 1
 BUTTON_FONT = QFont("Jokerman", 15)
 LABEL_FONT = QFont("Arial Black", 10)
@@ -197,6 +198,7 @@ class StatMagic (QMainWindow):
 		self.createButtons() #creates buttons from self-made method
 		self.createLabels() #creates labels for stat calcs in self-made method
 		self.createCheckboxes()
+		self.createSliders()
 		self.graph = PlotCanvas(self, width=5, height=4)
 		self.graph.move(0,0)
 		self.organizeLayout() #organizes layout of window
@@ -243,10 +245,13 @@ class StatMagic (QMainWindow):
 			print("Success")
 
 	def openingFile(self):
-		fname = QFileDialog.getOpenFileName(self, 'Open file', '/home/Documents/Fall 2017/Dailys Engr Analysis')
-		with open(fname[0], 'r') as file:
-			self.lines = file.readlines()
-			self.parseData(self.lines)
+		try:
+			fname = QFileDialog.getOpenFileName(self, 'Open file', '/home/Documents/Fall 2017/Dailys Engr Analysis')
+			with open(fname[0], 'r') as file:
+				self.lines = file.readlines()
+				self.parseData(self.lines)
+		except:
+			pass
 			 
 
 	def createButtons(self):
@@ -307,6 +312,24 @@ class StatMagic (QMainWindow):
 			check.stateChanged.connect(self.computeStats)
 			check.setFont(LABEL_FONT)
 
+	def createSliders(self):
+		self.histogramBinSlider = QSlider(Qt.Horizontal, self)
+		self.histogramBinSlider.valueChanged.connect(self.setNumOfHistoBins)
+		self.histogramBinSlider.setMinimum(1)
+		self.histogramBinSlider.setMaximum(100)
+		self.histogramBinSlider.setValue(NUM_OF_HISTOGRAM_BINS)
+
+		#self.histogramBinSlider.setValue(NUM_OF_HISTOGRAM_BINS)
+
+	def setNumOfHistoBins(self):
+		global NUM_OF_HISTOGRAM_BINS, startingUp
+		NUM_OF_HISTOGRAM_BINS = self.histogramBinSlider.value()
+		print(NUM_OF_HISTOGRAM_BINS)
+		self.histogramBinSlider.setValue(NUM_OF_HISTOGRAM_BINS)
+		if not startingUp: #fix later. crashes if slider moves with no data
+			self.computeStats()
+		startingUp = False
+		
 	def organizeLayout(self):
 		self.entireLayout = QWidget()
 		tableBox = QGroupBox("Data Table") #make data table box
@@ -326,6 +349,7 @@ class StatMagic (QMainWindow):
 		graphBoxLayout = QVBoxLayout() #create vertical layout
 		#self.fakeLabel = QLabel("Graph will go here", self) #placeholder
 		graphBoxLayout.addWidget(self.graph) #adds graph to box
+		graphBoxLayout.addWidget(self.histogramBinSlider)
 		graphBoxLayout.addWidget(self.editTitlesButton) #adds edit titles button to box
 		graphBox.setLayout(graphBoxLayout) #apply layout to box
 
