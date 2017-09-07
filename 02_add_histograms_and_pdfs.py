@@ -185,7 +185,7 @@ class StatCalculator(QMainWindow):
           
         main_widget.setLayout(grid_layout)
         self.setCentralWidget(main_widget)
-        self.setWindowTitle('Plotting Probability Density Functions - Dr. Daily\'s Example')
+        self.setWindowTitle('Plotting Probability Density Functions - Chris Vasquez')
         self.show()
     
     def load_data(self):        
