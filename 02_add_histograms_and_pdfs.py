@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep  5 09:20:25 2017
+
+@author: redwi
+"""
+
 #!/bin/env/python
 # An introduction graphing some probability density functions
 # 
@@ -21,13 +28,18 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTableWidgetItem,
                              QGroupBox,
                              QGridLayout,
-                             QSizePolicy)
-from PyQt5.QtCore import QCoreApplication
-
+                             QSizePolicy,
+                             QMessageBox, QLineEdit)
+from PyQt5.QtCore import QCoreApplication, Qt
+import statistics
+from scipy import stats
 import numpy as np
 #import the distributions to use
 from scipy.stats import norm
 from scipy.stats import lognorm
+from scipy.stats import uniform
+from scipy.stats import t
+from scipy.stats import f
 # add more here
 
 
@@ -53,7 +65,7 @@ class MyMplCanvas(FigureCanvas):
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
-        FigureCanvas.mpl_connect(self,'button_press_event', self.export)
+        FigureCanvas.mpl_connect(self,'button_press_event', self.double_click)
         
     def export(self,event):
         filename = "ExportedGraph.pdf"
@@ -68,6 +80,9 @@ class MyMplCanvas(FigureCanvas):
         msg.setWindowModality(Qt.ApplicationModal)
         msg.exec_()
         print("Exported PDF file")
+        
+    def double_click(self, event):
+        FigureCanvas.mpl_connect(self,'button_press_event', self.export)
         
 class MyDynamicMplCanvas(MyMplCanvas):
     """A canvas that updates itself frequently with a new plot."""
@@ -91,21 +106,39 @@ class MyDynamicMplCanvas(MyMplCanvas):
         print("Finished Drawing Normalized Histogram.")
     
     def plot_random_variable(self,data,rv):
+        print(rv)
         data_mean = np.mean(data)
         data_sigma = np.std(data)
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
         
-        if rv.name =='lognorm':
-          #s is the shape parameter
+        if (rv.name =='lognorm'):
+          print(rv)
+            #s is the shape parameter
           # See https://en.wikipedia.org/wiki/Log-normal_distribution
           # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
           s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
           #shift to only use positive numbers
           y = rv.pdf(x,s,loc=0,scale=data_sigma)
-        else:
-          y = rv.pdf(x,loc=data_mean,scale=data_sigma)
           
+        elif (rv.name == 'uniform'):
+            
+            y = rv.pdf(x)
+            
+        elif (rv.name == 't'):
+          
+            df = 1
+            y = rv.pdf(x,df) 
+            
+        elif (rv.name == 'f'):
+            df1 = 1
+            df2 = 1
+            y= F.pdf(x,df1, df2)
+
+        else:
+         print(rv)
+         y = rv.pdf(x,loc=data_mean,scale=data_sigma)
+         
         self.axes.plot(x,y,label=rv.name)
         self.axes.legend(shadow=True)
         self.draw()
@@ -120,13 +153,30 @@ class StatCalculator(QMainWindow):
               
     def init_ui(self):
         #Builds GUI
-        self.setGeometry(200,200,1000,700)
+        self.setGeometry(200,30,1000,700)
 
+        bar = self.menuBar()
+        file = bar.addMenu("File")
+        file.addAction("Open .CSV File Type")
+        file.triggered.connect(self.load_data)
+        
         self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.load_data)
      
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
-        self.std_label = QLabel("Std Dev: Not Computed Yet",self)
+        self.stdError_label = QLabel("Standard Error: Not Computed Yet",self)
+        self.median_label = QLabel("Median: Not Computed Yet",self)
+        self.mode_label = QLabel("Mode: Not Computed Yet",self)
+        self.stdDev_label = QLabel("Standard Deviation: Not Computed Yet",self)
+        self.var_label = QLabel("Standard Variance: Not Computed Yet",self)
+        self.kurt_label = QLabel("Kurtosis: Not Computed Yet",self)
+        self.skew_label = QLabel("Skewness: Not Computed Yet",self)
+        self.max_label = QLabel("Max: Not Computed Yet",self)
+        self.min_label = QLabel("Min: Not Computed Yet",self)
+        self.range_label = QLabel("Range: Not Computed Yet",self)
+        self.sum_label = QLabel("Sum: Not Computed Yet",self)
+        self.count_label = QLabel("Number of Entries: Not Computed Yet",self)
+        
         
         #Set up a Table to display data
         self.data_table = QTableWidget()
@@ -151,8 +201,20 @@ class StatCalculator(QMainWindow):
         #repeat the box layout for Statistics
         stats_box = QGroupBox("Summary Statistics")
         stats_box_layout = QVBoxLayout()
-        stats_box_layout.addWidget(self.mean_label)
-        stats_box_layout.addWidget(self.std_label)
+
+        stats_box_layout.addWidget(self.mean_label)       
+        stats_box_layout.addWidget(self.median_label)
+        stats_box_layout.addWidget(self.stdError_label)
+        stats_box_layout.addWidget(self.mode_label)
+        stats_box_layout.addWidget(self.stdDev_label)
+        stats_box_layout.addWidget(self.var_label)
+        stats_box_layout.addWidget(self.kurt_label)
+        stats_box_layout.addWidget(self.skew_label)
+        stats_box_layout.addWidget(self.max_label)
+        stats_box_layout.addWidget(self.min_label)
+        stats_box_layout.addWidget(self.range_label)
+        stats_box_layout.addWidget(self.sum_label)
+        stats_box_layout.addWidget(self.count_label)
         stats_box.setLayout(stats_box_layout)
 
         #Ignore the box creation for now, since the graph box would just have 1 widget
@@ -170,10 +232,22 @@ class StatCalculator(QMainWindow):
         self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
         self.log_normal_checkbox.stateChanged.connect(self.compute_stats)
         
+        self.uniform_checkbox = QCheckBox('Uniform',self)
+        self.uniform_checkbox.stateChanged.connect(self.compute_stats)
+       
+        self.t_checkbox = QCheckBox('T Distribution', self)
+        self.t_checkbox.stateChanged.connect(self.compute_stats)
+       
+        self.F_checkbox = QCheckBox('F Distribution', self)
+        self.F_checkbox.stateChanged.connect(self.compute_stats)
+        
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
         distribution_box_layout.addWidget(self.normal_checkbox)
         distribution_box_layout.addWidget(self.log_normal_checkbox)
+        distribution_box_layout.addWidget(self.uniform_checkbox)
+        distribution_box_layout.addWidget(self.t_checkbox)
+        distribution_box_layout.addWidget(self.F_checkbox)
         distribution_box.setLayout(distribution_box_layout)
 
         #Now we can set all the previously defined boxes into the main window
@@ -190,14 +264,14 @@ class StatCalculator(QMainWindow):
     
     def load_data(self):        
         #for this example, we'll hard code the file name.
-        data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+        data_file_name = QFileDialog.getOpenFileName(self, 'Open File', '/')  
         #for the assignment, have a dialog box provide the filename
 
         #check to see if the file exists and then load it
-        if os.path.exists(data_file_name):
+        if os.path.exists(data_file_name[0]):
             header_row = 1 
             #load data file into memory as a list of lines       
-            with open(data_file_name,'r') as data_file:
+            with open(data_file_name[0],'r') as data_file:
                 self.data_lines = data_file.readlines()
         
             print("Opened {}".format(data_file_name))
@@ -241,28 +315,68 @@ class StatCalculator(QMainWindow):
         
         if len(item_list) > 1: #Check to see if there are 2 or more samples
             data_array = np.asarray(item_list)
-            mean_value = np.mean(data_array)
-            stdev_value = np.std(data_array)
+            mean_value = np.mean(data_array)            
+            stdDev_value = np.std(data_array)
+            stdError_value = stats.sem(data_array)
+            median_value = np.median(data_array)
+            mode_value = statistics.mode(data_array)
+            var_value = np.var(data_array)
+            kurt_value = stats.kurtosis(data_array)
+            skew_value = stats.skew(data_array)
+            max_value = max(data_array)
+            min_value = min(data_array) 
+            range_value = max_value-min_value
+            sum_value = sum(data_array)
+            count_value = len(data_array)
             
-            print("Mean = {0:5f}".format(mean_value))
-            self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
-            self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+            #print("Mean = {0:5f}".format(mean_value))
+            self.mean_label.setText("Mean = {0:3f} ".format(mean_value))
+            #print("Standard Error = {0:5f} ".format(stdError_value))
+            self.stdError_label.setText("Standard Error = {0:3f} ".format(stdError_value))
+            #print("Median = {0:5f} ".format(median_value))
+            self.median_label.setText("Median = {0:3f} ".format(median_value))
+            #print("Mode = {0:5f} ".format(mode_value))
+            self.mode_label.setText("Mode = {0:3f} ".format(mode_value))
+            #print("Standard Deviation = {0:5f} ".format(stdDev_value))
+            self.stdDev_label.setText("Standard Deviation = {0:3f} ".format(stdDev_value))
+            #print("Stanard Variance = {0:5f} ".format(var_value))
+            self.var_label.setText("Standard Variance = {0:3f} ".format(var_value))
+            #print("Kurtosis = {0:5f} ".format(kurt_value))
+            self.kurt_label.setText("Kurtosis = {0:3f} ".format(kurt_value))
+            #print("Skew = {0:5f} ".format(skew_value))
+            self.skew_label.setText("Skewness = {0:3f} ".format(skew_value))
+            #print("Max = {0:5f} ".format(max_value))
+            self.max_label.setText("Max = {0:3f} ".format(max_value))
+            #print("Min = {0:5f} ".format(min_value))
+            self.min_label.setText("Min = {0:3f} ".format(min_value))
+            #print("Range  = {0:5f} ".format(range_value))
+            self.range_label.setText("Range = {0:3f} ".format(range_value))
+            #print("Sum = {0:5f} ".format(sum_value))
+            self.sum_label.setText("Sum = {0:3f} ".format(sum_value))
+            #print("Count = {0:5f} ".format(count_value))
+            self.count_label.setText("Number of Entries = {0:3f} ".format(count_value))
             
             self.graph_canvas.plot_histogram(data_array)
             if self.normal_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,norm)
             if self.log_normal_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,lognorm)
+            if self.uniform_checkbox.isChecked():
+                self.graph_canvas.plot_uniform(data_array, uniform)
+            if self.t_checkbox.isChecked():
+                self.graph_canvas.plot_uniform(data_array, t)
+            if self.F_checkbox.isChecked():
+                self.graph_canvas.plot_uniform(data_array, t)
                 #add more distributions here
         
 '''       
-  1. Add the ability to plot a normalized Histogram of the selected data in the table.
-  2. Add a menu option to open a CSV data file.
+  1. Add the ability to plot a normalized Histogram of the selected data in the table.*
+  2. Add a menu option to open a CSV data file.*
   3. Add a checkbox for at least 5 distribution functions to plot over the top of the Histogram. 
     a. Include a legend and appropriate labels on your graph.
     b. Include axes labels. (Challenge: make the labels editable in your program).
-  4. Use a grid style layout for your GUI
-  5. Save the plot to a PDF when you double click on it.
+  4. Use a grid style layout for your GUI*
+  5. Save the plot to a PDF when you double click on it.*
   6. Try to find one of the most obscure distributions as one of your 5. Please try to be different than everyone else. 
   7. Print and turn in a screenshot of your GUI on one page. Be sure your name in in the window title.
   8. Print and turn in the PDF file of the properly labeled Histogram with 2 distributions shown.
