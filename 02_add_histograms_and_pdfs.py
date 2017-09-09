@@ -14,23 +14,10 @@ from matplotlib.figure import Figure
 import matplotlib.mlab as mlab
 import math
 
-#global HEADER_ROW, BUTTON_FONT, LABEL_FONT, X_AXIS_LABEL, DEGREES_OF_FREEDOM, ALPHA_ALPHA, ALPHA_BETA, BETA, startingUp
-#startingUp = True
-#HEADER_ROW = 1
-#BUTTON_FONT = QFont("Jokerman", 15)
-#LABEL_FONT = QFont("Arial Black", 10)
-#X_AXIS_LABEL = "Temperature"
-#Y_AXIS_LABEL = "Estimated Prob. Density Funct."
-#GRAPH_TITLE = "Probability Density Function Plots"
-#NUM_OF_HISTOGRAM_BINS = 50
-#DEGREES_OF_FREEDOM = 1
-#ALPHA_ALPHA = 1 #alpha for alpha distribution
-#ALPHA_BETA = 1 #alpha for beta distribution
-#BETA = 1
 
 
 class PlotCanvas(FigureCanvas):
-	def __init__(self, parent=None, width=5, height=4, dpi=100):
+	def __init__(self, parent=None, width=5, height=4, dpi=100): 
 		self.fig = Figure(figsize=(width,height), dpi=dpi) #creates figure object
 		self.axes = self.fig.add_subplot(111) #1 by 1 grid 1st subplot, change if multiple subplots needed
 
@@ -39,34 +26,31 @@ class PlotCanvas(FigureCanvas):
 
 		FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding) #allows to expand in X and Y?
 		FigureCanvas.updateGeometry(self) #updates geom accordingly?
-		FigureCanvas.mpl_connect(self,'button_press_event', self.export)
+		FigureCanvas.mpl_connect(self,'button_press_event', self.export) #if figure clicked, calls the export function
 
-		self.graphTitle = "Title"
-		self.xAxisLabel = "X Axis"
-		self.yAxisLabel = "Y Axis"
-		self.numOfHistoBins = 50
-		self.startingUp = True
+		self.graphTitle = "Title" #sets default title
+		self.xAxisLabel = "X Axis" #sets default x-axis title
+		self.yAxisLabel = "Y Axis" #sets default y-axis title
+		self.numOfHistoBins = 50 #sets default number of histograms bins
+		self.startingUp = True #current boolean fix to keep slider from setting number of bins before selecting data
 
-	def export(self,event):
-		filename, submit = QInputDialog.getText(self, "Save As", "File Name")
-		filename += ".pdf"
-		#filename = "ExportedGraph.pdf"
-		if submit:
-			self.fig.savefig(filename)
-			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
-			msg.setText("Saved a copy of the graphics window to {}".format(filename))
-			#msg.setInformativeText("This is additional information")
+	def export(self,event): #saving graphs to pdf
+		filename, submit = QInputDialog.getText(self, "Save As", "File Name") #takes name of file to save as
+		filename += ".pdf" #uses pdf format for entered filename
+		if submit: #if clicked
+			self.fig.savefig(filename) #save it as that pdf
+			msg = QMessageBox() #creates message box
+			msg.setIcon(QMessageBox.Information) #makes information type of icon?
+			msg.setText("Saved a copy of the graphics window to {}".format(filename)) #prints name file is saved as
 			msg.setWindowTitle("Saved PDF File")
-			msg.setDetailedText("The full path of the file is \n{}".format(os.path.abspath(os.getcwd())))
-			msg.setStandardButtons(QMessageBox.Ok)
-			msg.setWindowModality(Qt.ApplicationModal)
-			msg.exec_()
+			msg.setDetailedText("The full path of the file is \n{}".format(os.path.abspath(os.getcwd()))) #prints path where saved
+			msg.setStandardButtons(QMessageBox.Ok) #makes ok button?
+			msg.setWindowModality(Qt.ApplicationModal)#sets dialog box to type that blocks input to other visible windows in same app
+			msg.exec_() #escaping dialog box?
 			print("Exported PDF file")
 
-	def plotHistogram(self, dataArray):
-		#global X_AXIS_LABEL, GRAPH_TITLE,NUM_OF_HISTOGRAM_BINS #allows us to use these global vars
-		self.currentData = dataArray
+	def plotHistogram(self, dataArray): #plots the histogram
+		self.currentData = dataArray #sets current data as variable
 		self.axes.cla() #clears axes
 		self.axes.hist(self.currentData, self.numOfHistoBins, normed=True, Label="Empirical",edgecolor='b',color='y') #makes normalized histogram
 		self.axes.set_xlabel(self.xAxisLabel) #sets x axis label
@@ -76,7 +60,7 @@ class PlotCanvas(FigureCanvas):
 		self.draw() #draws graph
 		print("Finished Drawing Normalized Histogram.")
 
-	def plotNormal(self, mu, sigma): #verified
+	def plotNormal(self, mu, sigma): #plots the normal distribution of the current selected data
 		xmin, xmax = self.axes.get_xlim() #stores current x-axis limits
 		x = np.linspace(mu-3*sigma, mu+3*sigma, 100) #stores evenly spaced numbers over specified interval
 		#for this case, 100 evenly spaces points for 99.7% probability
@@ -89,7 +73,7 @@ class PlotCanvas(FigureCanvas):
 		self.draw() #draws it on the graph
 		print("Finished Drawing Normal Distribution")
 
-	def checkResults(self, libraryCalcs, myCalcs):
+	"""def checkResults(self, libraryCalcs, myCalcs):
 		print("YEA")
 		for i in range(len(myCalcs)):
 			difference = libraryCalcs[i] - myCalcs[i]
@@ -111,7 +95,7 @@ class PlotCanvas(FigureCanvas):
 			eTerm = math.exp(powerTerm)
 			valueList.append(frontTerm*eTerm)
 		return valueList
-
+	"""
 	def plotLogNormal(self, mu, sigma): #verified
 		xmin, xmax = self.axes.get_xlim()
 		x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
@@ -126,7 +110,7 @@ class PlotCanvas(FigureCanvas):
 		self.draw()
 		print("Finished Drawing Log-Normal Distribution")
 
-	def getLogNormal(self, x, mu, sigma):
+	"""def getLogNormal(self, x, mu, sigma):
 		#page 179
 		#exponent1 = oldMu + (oldSigma**2)/2
 		#exponent2 = 2*oldMu + oldSigma**2
@@ -145,7 +129,7 @@ class PlotCanvas(FigureCanvas):
 				eTerm = math.exp(powerTerm)
 				valueList.append(frontTerm*eTerm)
 		return valueList
-
+	"""
 	def plotChiSquared(self, mu, sigma, df):
 		xmin, xmax = self.axes.get_xlim()
 		x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
@@ -173,34 +157,25 @@ class PlotCanvas(FigureCanvas):
 		self.draw()
 		print("Finished Drawing Alpha Distribution")
 
-	def editingGraphTitles(self):
+	def editingGraphTitles(self): #edits axis titles and graph title of graph
 		#improving this would be making it one dialog
 		#global X_AXIS_LABEL, Y_AXIS_LABEL, GRAPH_TITLE
 		title, submit = QInputDialog.getText(self, 'Input Dialog', 'Plot Title:')
 		xLabel, submit = QInputDialog.getText(self, 'Input Dialog','X-Axis Label:')
 		yLabel, submit = QInputDialog.getText(self, 'Input Dialog','Y-Axis Label:')
 		if submit:
-			self.graphTitle = title
+			self.graphTitle = title #sets instance vars to entered info
 			self.xAxisLabel = xLabel
 			self.yAxisLabel = yLabel
-			self.plotHistogram(self.currentData)
+			self.plotHistogram(self.currentData) #replots same data with new titles
 			print("Success")
 
-	def setNumOfHistoBins(self, sliderValue):
-		#global NUM_OF_HISTOGRAM_BINS, startingUp
-		self.numOfHistoBins = sliderValue
-		print(self.numOfHistoBins)
-		#histogramBinSlider.setValue(self.numOfHistoBins)
-		if not self.startingUp: #fix later. crashes if slider moves with no data
-			self.plotHistogram(self.currentData)
-		self.startingUp = False
-	"""def testPlot(self):
-		data = [random.random() for i in range(25)]
-		ax = self.figure.add_subplot(111) #creates 1 by 1 subplot 1st subplot 
-		ax.plot(data, 'r-') #plots red and connects lines between points
-		ax.set_title('Plotting') #sets Plot Title
-		self.draw() #draws our object
-		"""
+	def setNumOfHistoBins(self, sliderValue): #sets number of histogram bins
+		self.numOfHistoBins = sliderValue #sets instance variable to value of slider
+		print("Bins: " + str(self.numOfHistoBins))
+		if not self.startingUp: #fix later. crashes at first run
+			self.plotHistogram(self.currentData) #plots same data with new num of histograms
+		self.startingUp = False #it's not the first run anymore
 
 class StatMagic (QMainWindow):
 	def __init__(self):
@@ -208,86 +183,71 @@ class StatMagic (QMainWindow):
 		self.setAcceptDrops(True) #accept dropping files
 		self.initUI() #set specific widget details up for our object (the UI)
 
-	def initUI(self):
+	def initUI(self): #defining my GUI object
 		self.setWindowTitle("Blake Fusick Statistic Calc") #Changes window title
 		self.dataTable = QTableWidget() #create data table
 		self.dataTable.itemSelectionChanged.connect(self.computeStats) #if selected item is different call computeStats method
 		#compute stats in real time as selections are made
 
-		openFile = QAction(QIcon('Open-icon.png'),'Open', self)
-		openFile.setShortcut('Ctrl+O')
-		openFile.setStatusTip('Open new File')
-		openFile.triggered.connect(self.openingFile)
+		openFile = QAction(QIcon('Open-icon.png'),'Open', self) #creates an action called open file
+		openFile.setShortcut('Ctrl+O') #sets ctrl+o as shortcut
+		openFile.setStatusTip('Open new File') #sets tip to say what action does
+		openFile.triggered.connect(self.openingFile) #calls function openingFile if action called
 
-		menubar = self.menuBar()
-		fileMenu = menubar.addMenu('&File')
-		fileMenu.addAction(openFile)
+		menubar = self.menuBar() #adds a menu bar
+		fileMenu = menubar.addMenu('&File') #adds File as a menu option
+		fileMenu.addAction(openFile) #adds openFile action under File option
 
-		self.graph = PlotCanvas(self, width=5, height=4)
-		self.graph.move(0,0)
+		self.graph = PlotCanvas(self, width=5, height=4) #creates object from PlotCanvas
+		self.graph.move(0,0) #sets position?
 		self.degreesOfFreedom = 1 #dof variable for chi2 distribution
 		self.alphaAlpha = 1 #alpha variable for alpha distribution
 		self.alphaBeta = 1 #alpha variable for beta distribution
 		self.beta = 1 #beta variable for beta distribution
 		self.createButtons() #creates buttons from self-made method
 		self.createLabels() #creates labels for stat calcs in self-made method
-		self.createCheckboxes()
-		self.createSliders()
+		self.createCheckboxes() #creates checkboxes
+		self.createSliders() #creats slides
 		self.organizeLayout() #organizes layout of window
-		self.setCentralWidget(self.entireLayout)
+		self.setCentralWidget(self.entireLayout) #sets the entire layout as my central widget for QMainWindow
 		self.resize(1300,1000) #sizes the window
 		self.activateWindow() #inherited from QWidget
 		self.setWindowIcon(QIcon('pokecoin.png')) #sets tiny icon on window
 		self.show() #shows the GUI
 
-	def editingAlpha(self):
-		#global ALPHA_ALPHA
-		alpha, submit = QInputDialog.getText(self, 'Change Variable', 'Alpha')
+	def editingAlpha(self): #changes alpha variable with entered value for alpha distribution
+		alpha, submit = QInputDialog.getText(self, 'Change Variable', 'Alpha') #input dialog box to get alpha
 		print(alpha)
-		if submit:
-			self.alphaAlpha = float(alpha)
-			self.computeStats()
+		if submit: #when submitting
+			self.alphaAlpha = float(alpha) #sets alpha as new var
+			self.computeStats() #recomputes stats with new alpha
 
-	def editingBeta(self):
-		#global ALPHA_BETA, BETA
-		alpha, submit = QInputDialog.getText(self, 'Change Variable', 'Alpha')
-		beta, submit = QInputDialog.getText(self, 'Change Variable', 'Beta')
+	def editingBeta(self): #changes alpha and beta variables with given values for beta distribution
+		alpha, submit = QInputDialog.getText(self, 'Change Variable', 'Alpha') #input dialog to get alpha
+		beta, submit = QInputDialog.getText(self, 'Change Variable', 'Beta') #input dialog to get beta
+		print("alpha: " +alpha+ " beta: " + beta)
 		if submit:
-			self.alphaBeta = float(alpha)
+			self.alphaBeta = float(alpha) #sets instance vars
 			self.beta = float(beta)
-			self.computeStats()
+			self.computeStats() #recomputes/graphs with new alpha/beta
 
-	def editingChi(self):
-		#global DEGREES_OF_FREEDOM
-		dof, submit = QInputDialog.getText(self, 'Change Variable', 'Degrees of Freedom')
+	def editingChi(self): #changes degrees of freedom for chi distribution
+		dof, submit = QInputDialog.getText(self, 'Change Variable', 'Degrees of Freedom') #input dialog to get dof
 		if submit:
-			self.degreesOfFreedom = float(dof)
-			self.computeStats()
+			self.degreesOfFreedom = float(dof) #sets instance var
+			self.computeStats() #recomputes with new dof
 
-	"""def editingGraphTitles(self):
-		#improving this would be making it one dialog
-		global X_AXIS_LABEL, Y_AXIS_LABEL, GRAPH_TITLE
-		title, submit = QInputDialog.getText(self, 'Input Dialog', 'Plot Title:')
-		xLabel, submit = QInputDialog.getText(self, 'Input Dialog','X-Axis Label:')
-		yLabel, submit = QInputDialog.getText(self, 'Input Dialog','Y-Axis Label:')
-		if submit:
-			GRAPH_TITLE = title
-			X_AXIS_LABEL = xLabel
-			Y_AXIS_LABEL = yLabel
-			self.computeStats()
-			print("Success")"""
-
-	def openingFile(self):
-		try:
-			fname = QFileDialog.getOpenFileName(self, 'Open file', '/home/Documents/Fall 2017/Dailys Engr Analysis')
-			with open(fname[0], 'r') as file:
-				self.lines = file.readlines()
-				self.parseData(self.lines)
-		except:
-			pass
+	def openingFile(self): #opens file via windows dialog
+		try: #error handling
+			fname = QFileDialog.getOpenFileName(self, 'Open file', '/home/Documents/Fall 2017/Dailys Engr Analysis') #get name of selected file
+			with open(fname[0], 'r') as file: #open it as read only
+				self.lines = file.readlines() #split into lines
+				self.parseData(self.lines) #parse data with custom function
+		except: #if error
+			pass #do nothing
 			 
 
-	def createButtons(self):
+	def createButtons(self): #creates buttons for GUI
 		#global BUTTON_FONT #lets us access the global variable
 		buttonFont = QFont("Jokerman", 15)
 
@@ -296,23 +256,20 @@ class StatMagic (QMainWindow):
 		self.loadButton.setToolTip('Drag and Drop a <b>CSV File</b> on the Window') #make a help popup
 		self.loadButton.clicked.connect(self.loadData) #call loadData() if clicked
 
-		self.editTitlesButton = QPushButton('Edit Titles', self)
-		self.editTitlesButton.clicked.connect(self.graph.editingGraphTitles)
+		self.editTitlesButton = QPushButton('Edit Titles', self) #creates edit titles button
+		self.editTitlesButton.clicked.connect(self.graph.editingGraphTitles) #when clicked calls editingGraphTitles function
 
-		self.alphaButton = QPushButton('Alpha Edit Variables', self)
-		self.alphaButton.clicked.connect(self.editingAlpha)
+		self.alphaButton = QPushButton('Alpha Edit Variables', self) #creates alpha edit variables button
+		self.alphaButton.clicked.connect(self.editingAlpha) #calls editingAlpha function when clicked
 
-		self.betaButton = QPushButton('Beta Edit Variables', self)
-		self.betaButton.clicked.connect(self.editingBeta)
+		self.betaButton = QPushButton('Beta Edit Variables', self) #creates beta edit variables button
+		self.betaButton.clicked.connect(self.editingBeta) #calls editingBeta function when clicked
 
-		self.chiSquaredButton = QPushButton('Chi-Squared Edit Variables', self)
-		self.chiSquaredButton.clicked.connect(self.editingChi)
-		#self.calcButton = QPushButton('Calculate Statistics', self) #create calc stat button
-		#self.calcButton.setFont(BUTTON_FONT) #set font
+		self.chiSquaredButton = QPushButton('Chi-Squared Edit Variables', self) #creates chi2 edit variables button
+		self.chiSquaredButton.clicked.connect(self.editingChi) #calls editingChi function when clicked
 
-	def createLabels(self):
-		#global LABEL_FONT #lets us access the global variable
-		self.labelFont = QFont("Arial Black", 10)
+	def createLabels(self): #creates labels for statistic calculations
+		self.labelFont = QFont("Arial Black", 10) #creates label font
 
 		self.meanLabel = QLabel("Mean: Not Computed", self) #default label for mean
 		self.stdErrorLabel = QLabel("Standard Error: Not Computed", self) #default label for std error
@@ -332,46 +289,31 @@ class StatMagic (QMainWindow):
 		for label in self.labels:
 			label.setFont(self.labelFont) #sets font of all labels
 
-	def createCheckboxes(self):
-		self.normalCheckbox = QCheckBox('Normal Distribution', self)
-		#self.normalCheckbox.stateChanged.connect(self.computeStats)
-		self.logNormalCheckbox = QCheckBox('Log-Normal Distribution', self)
-		#self.logNormalCheckbox.stateChanged.connect(self.computeStats)
-		self.alphaCheckbox = QCheckBox('Alpha Distribution', self)
-		#self.alphaCheckbox.stateChanged.connect(self.computeStats)
-		self.betaCheckbox = QCheckBox('Beta Distribution', self)
-		#self.betaCheckbox.stateChanged.connect(self.computeStats)
-		self.chiSquaredCheckbox = QCheckBox('Chi-Squared Distribution', self)
-		#self.chiSquaredCheckbox.stateChanged.connect(self.computeStats)
+	def createCheckboxes(self): #creates all checkboxes for distributions
+		self.normalCheckbox = QCheckBox('Normal Distribution', self) #normal distribution checkbox
+		self.logNormalCheckbox = QCheckBox('Log-Normal Distribution', self) #log normal distribution checkbox
+		self.alphaCheckbox = QCheckBox('Alpha Distribution', self) #alpha distribution checkbox
+		self.betaCheckbox = QCheckBox('Beta Distribution', self) #beta distribution checkbox
+		self.chiSquaredCheckbox = QCheckBox('Chi-Squared Distribution', self) #chi2 distribution checkbox
 		self.checkboxes = [self.normalCheckbox, self.logNormalCheckbox, self.alphaCheckbox,
 							self.betaCheckbox, self.chiSquaredCheckbox]
-		for check in self.checkboxes:
-			check.stateChanged.connect(self.computeStats)
-			check.setFont(self.labelFont)
+		for check in self.checkboxes: #for each checkbox
+			check.stateChanged.connect(self.computeStats) #if clicked, compute stats
+			check.setFont(self.labelFont) #set font to label font
 
-	def createSliders(self):
-		self.histogramBinSlider = QSlider(Qt.Horizontal, self)
-		self.histogramBinSlider.valueChanged.connect(self.setHistoBins)
-		self.histogramBinSlider.setMinimum(1)
-		self.histogramBinSlider.setMaximum(100)
-		self.histogramBinSlider.setValue(self.graph.numOfHistoBins)
+	def createSliders(self): #creates all sliders for GUI
+		self.histogramBinSlider = QSlider(Qt.Horizontal, self) #creates slider for number of histogram bins
+		self.histogramBinSlider.valueChanged.connect(self.setHistoBins)#if value changed, call setHistoBins
+		self.histogramBinSlider.setMinimum(1) #set minimum value of slider
+		self.histogramBinSlider.setMaximum(100) #set maximum value of slider
+		self.histogramBinSlider.setValue(self.graph.numOfHistoBins) #set value of slider to current value
 
-		#self.histogramBinSlider.setValue(NUM_OF_HISTOGRAM_BINS)
+	def setHistoBins(self): #sets number of histogram bins
+		binNumber = self.histogramBinSlider.value() #gets value of the position of slider
+		self.graph.setNumOfHistoBins(binNumber) #calls setNumOfHistoBins function from PlotCanvas to change and replot with new bins count
 
-	def setHistoBins(self):
-		binNumber = self.histogramBinSlider.value()
-		self.graph.setNumOfHistoBins(binNumber)
-	"""def setNumOfHistoBins(self):
-		global NUM_OF_HISTOGRAM_BINS, startingUp
-		NUM_OF_HISTOGRAM_BINS = self.hi
-		print(NUM_OF_HISTOGRAM_BINS)
-		self.histogramBinSlider.setValue(NUM_OF_HISTOGRAM_BINS)
-		if not startingUp: #fix later. crashes if slider moves with no data
-			self.computeStats()
-		startingUp = False"""
-		
-	def organizeLayout(self):
-		self.entireLayout = QWidget()
+	def organizeLayout(self): #organize widget layout of GUI
+		self.entireLayout = QWidget() #create widget to store entire layout
 		tableBox = QGroupBox("Data Table") #make data table box
 		tableBoxLayout = QVBoxLayout() #create vertical layout
 		tableBoxLayout.addWidget(self.loadButton) #add load button 
@@ -410,7 +352,7 @@ class StatMagic (QMainWindow):
 		gridLayout.addWidget(distributionBox,1,1)
 		self.entireLayout.setLayout(gridLayout) #set the actual layout so we can see it
 
-	def dragEnterEvent(self,e):
+	def dragEnterEvent(self,e): #defines what happens when file is dragged into gui
 		if e.mimeData().hasUrls(): #issue with csv hasFormat(text/csv)
 		#currently if the dragged data has a path
 			e.accept() #accept it
@@ -418,37 +360,20 @@ class StatMagic (QMainWindow):
 			e.ignore() #ignore it
 			print("You tried")
 
-	def dropEvent(self, e):
-		#global HEADER_ROW #lets me use the global variable
+	def dropEvent(self, e): #defines what happens when file is dropped into gui
 		fileObject = e.mimeData().urls()[0] #stores the file object of the dropped file
 		path = fileObject.path() #stores the path of the dropped file
-		#foundIndex = 0
 		with open(path[1:]) as file: #opens the file and starts at 1 to strip / from /C:/...
 			self.lines = file.readlines() #read the file into lines
-		#print("Opened {}".format(fileObject.fileName())) #prints file opened
-		#print (self.lines[1:10]) #print the first 10 lines
-		self.parseData(self.lines)
-		"""tableColumns = self.lines[HEADER_ROW].strip().split(',') #strip off /n and split on , to find num of columns
-		self.dataTable.setColumnCount(len(tableColumns)) #set column count of table to num of columns
-		self.dataTable.setHorizontalHeaderLabels(tableColumns) #creates titles of columns
+		self.parseData(self.lines) #parses data from the lines
 
-		currentRow = -1
-		for row in range(HEADER_ROW + 1, len(self.lines)): #for each row after the header
-			rowValues = self.lines[row].strip().split(',') #split them up the same way
-			currentRow += 1 #moves on to next row in table we're creating
-			self.dataTable.insertRow(currentRow) #insert a row
-			for col in range(len(tableColumns)): #for each value in the row
-				entry = QTableWidgetItem("{}".format(rowValues[col])) #store it in entry
-				self.dataTable.setItem(currentRow,col,entry) #put it in the table
-		print("Filled {} rows".format(row)) #prints how many rows were added"""
-	def parseData(self, dataLines):
-		#global HEADER_ROW
-		headerRow = 1
+	def parseData(self, dataLines): #parses data
+		headerRow = 1 #sets which row the header is in
 		tableColumns = self.lines[headerRow].strip().split(',') #strip off /n and split on , to find num of columns
 		self.dataTable.setColumnCount(len(tableColumns)) #set column count of table to num of columns
 		self.dataTable.setHorizontalHeaderLabels(tableColumns) #creates titles of columns
 
-		currentRow = -1
+		currentRow = -1 #index for generated table
 		for row in range(headerRow + 1, len(self.lines)): #for each row after the header
 			rowValues = self.lines[row].strip().split(',') #split them up the same way
 			currentRow += 1 #moves on to next row in table we're creating
@@ -463,7 +388,7 @@ class StatMagic (QMainWindow):
 		self.openingFile() #new method to actually open file
 		#path where to open Windows explorer
 
-	def computeStats(self):
+	def computeStats(self): #computes all of our statistics and graphs
 		itemList = [] #creating list to store data as floats
 		items = self.dataTable.selectedItems() #stores currently selected items (objects)
 		for item in items: #for each of the items
@@ -520,15 +445,14 @@ class StatMagic (QMainWindow):
 				self.graph.plotNormal(meanValue, stdDeviationValue) #plots the normal distribution
 			except:
 				pass
-		if self.logNormalCheckbox.isChecked():
-			self.graph.plotLogNormal(meanValue, stdDeviationValue)
-		if self.alphaCheckbox.isChecked():
-			self.graph.plotAlpha(meanValue, stdDeviationValue, self.alphaAlpha) 
-		if self.betaCheckbox.isChecked():
-			self.graph.plotBeta(meanValue, stdDeviationValue, self.alphaBeta, self.beta) 
-		if self.chiSquaredCheckbox.isChecked():
-			#global DEGREES_OF_FREEDOM
-			self.graph.plotChiSquared(meanValue, stdDeviationValue, self.degreesOfFreedom) 
+		if self.logNormalCheckbox.isChecked(): #if log normal is checked
+			self.graph.plotLogNormal(meanValue, stdDeviationValue) #plots log normal distribution
+		if self.alphaCheckbox.isChecked(): #if alpha is checked
+			self.graph.plotAlpha(meanValue, stdDeviationValue, self.alphaAlpha) #plots alpha distribution
+		if self.betaCheckbox.isChecked(): #if beta is checked
+			self.graph.plotBeta(meanValue, stdDeviationValue, self.alphaBeta, self.beta) #plots beta distribution
+		if self.chiSquaredCheckbox.isChecked(): #if chi2 is checked
+			self.graph.plotChiSquared(meanValue, stdDeviationValue, self.degreesOfFreedom) #plots chi2 distribution
 
 if __name__ == '__main__':
 	app = QCoreApplication.instance() #references instance of app if it exists
