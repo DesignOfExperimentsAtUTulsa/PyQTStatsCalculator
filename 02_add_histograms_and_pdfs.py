@@ -8,35 +8,34 @@
 # This is a gentle introduction to programming using Python, numpy, scipy, and PyQt5
 # Examples from https://docs.scipy.org/doc/scipy/reference/tutorial/stats.html
 # Import modules 
-import sys,os
-from PyQt5.QtWidgets import (QMainWindow,
-                             QWidget,
-                             QFileDialog, 
-                             QLabel, 
-                             QCheckBox, 
-                             QVBoxLayout, 
-                             QApplication, 
-                             QPushButton,
-                             QTableWidget, 
-                             QTableWidgetItem,
-                             QGroupBox,
-                             QGridLayout,
-                             QSizePolicy)
-from PyQt5.QtCore import QCoreApplication
+import sys
+from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
+                             QFileDialog, QLabel, QSlider, QCheckBox, 
+                             QLineEdit, QVBoxLayout, QApplication, QPushButton,
+                             QTableWidget, QTableWidgetItem,QSizePolicy,
+                             QGridLayout,QGroupBox, QMainWindow, QInputDialog,
+                             QLCDNumber)
+from PyQt5.QtWidgets import QAction, qApp
+
+from PyQt5.QtCore import Qt, QTimer, QCoreApplication
+from PyQt5.QtGui import QIcon
 
 import numpy as np
-#import the distributions to use
-from scipy.stats import norm
-from scipy.stats import lognorm
-# add more here
+
+from scipy import stats
 
 
+import os
+ 
 from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import rcParams
+import matplotlib.mlab as mlab
 
 rcParams.update({'figure.autolayout': True})
+
+
 
 #Add a class for matplotlib graphs
 # Code was inspired from the Internet
@@ -90,25 +89,50 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.draw()
         print("Finished Drawing Normalized Histogram.")
     
-    def plot_random_variable(self,data,rv):
-        data_mean = np.mean(data)
-        data_sigma = np.std(data)
+    def plot_normal(self,mu,sigma):
         xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
-        
-        if rv.name =='lognorm':
-          #s is the shape parameter
-          # See https://en.wikipedia.org/wiki/Log-normal_distribution
-          # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
-          s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
-          #shift to only use positive numbers
-          y = rv.pdf(x,s,loc=0,scale=data_sigma)
-        else:
-          y = rv.pdf(x,loc=data_mean,scale=data_sigma)
-          
-        self.axes.plot(x,y,label=rv.name)
+        x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
+        y = mlab.normpdf(x, mu, sigma)
+        self.axes.plot(x,y,label="Normal")
         self.axes.legend(shadow=True)
         self.draw()
+        print("Finished Drawing Normal Distribution.")
+        
+    def plot_hypsec(self,apara,bpara):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(apara-5*bpara,apara+5*bpara, 100)
+        y = stats.hypsecant.pdf(x,apara,bpara)
+        self.axes.plot(x,y,label="Hyperbolic Secant")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Hyperbolic Secant Distribution.")
+        
+    def plot_gamma(self,agam,bgam,cgam):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace((bgam+agam*cgam)-3*(cgam*cgam*agam)**0.5,(bgam+agam*cgam)+3*(cgam*cgam*agam)**0.5, 100)
+        y = stats.gamma.pdf(x,agam,bgam,cgam)
+        self.axes.plot(x,y,label="Gamma")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Gamma Distribution.")
+        
+    def plot_chi2(self,chi2a,chi2b,chi2c,meanval,stdval):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(meanval-3*stdval,meanval+3*stdval, 100)
+        y = stats.chi2.pdf(x,chi2a,chi2b,chi2c)
+        self.axes.plot(x,y,label="Chi Squard")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Chi Squared Distribution.")
+        
+    def plot_beta(self,betaa,betab,betac,betad,meanval,stdval):
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(meanval-3.5*stdval,meanval+3.5*stdval, 100)
+        y = stats.beta.pdf(x,betaa,betab,betac,betad)
+        self.axes.plot(x,y,label="Beta")
+        self.axes.legend(shadow=True)
+        self.draw()
+        print("Finished Drawing Beta Distribution.")
         
 class StatCalculator(QMainWindow):
 
@@ -120,13 +144,55 @@ class StatCalculator(QMainWindow):
               
     def init_ui(self):
         #Builds GUI
+        
+        
+        OpenAct = QAction('&Open', self)        
+        OpenAct.setShortcut('Ctrl+O')
+        OpenAct.setStatusTip('Open File')
+        OpenAct.triggered.connect(self.load_data)
+        self.statusBar()
+
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(OpenAct)
+        
+        
+        
         self.setGeometry(200,200,1000,700)
 
         self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.load_data)
-     
+
+        #self.xaxis_label=QPushButton('Set X-Axis Label',self)
+        #self.xaxis_label.clicked.connect(self.xaxis_fnc)
+
+        #self.yaxis_label=QPushButton('Set Y-Axis Label',self)
+        #self.yaxis_label.clicked.connect(self.yaxis_fnc)
+        
+        #self.lcd=QLCDNumber(self)
+        
+        #self.slider=QSlider(Qt.Horizontal,self)
+        #self.slider.setFocusPolicy(Qt.NoFocus)
+        #self.slider.setGeometry(30,40,100,300)
+        #self.slider.valueChanged[int].connect(self.slider_val)
+        #self.slider.valueChanged.connect(self.lcd.display)
+        
+        
+        
+        
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
         self.std_label = QLabel("Std Dev: Not Computed Yet",self)
+        self.median_label = QLabel("Median: Not Computed Yet", self)
+        self.var_label = QLabel("Variance: Not Computed Yet", self)
+        self.range_label = QLabel("Range: Not Computed Yet", self)
+        self.min_label = QLabel("Min: Not Computed Yet", self)
+        self.max_label = QLabel("Max: Not Computed Yet", self)
+        self.sum_label = QLabel("Sum: Not Computed Yet", self)
+        self.stderr_label=QLabel("Std Error: Not Computed Yet", self)
+        self.kurt_label=QLabel("Kurtosis: Not Computed Yet", self)
+        self.skew_label=QLabel("Skew: Not Computed Yet", self)
+        self.count_label=QLabel("Count: Not Computed Yet", self)
+        self.mode_label=QLabel("Mode: Not Computed Yet", self)
         
         #Set up a Table to display data
         self.data_table = QTableWidget()
@@ -152,7 +218,18 @@ class StatCalculator(QMainWindow):
         stats_box = QGroupBox("Summary Statistics")
         stats_box_layout = QVBoxLayout()
         stats_box_layout.addWidget(self.mean_label)
+        stats_box_layout.addWidget(self.stderr_label)
+        stats_box_layout.addWidget(self.median_label)
+        stats_box_layout.addWidget(self.mode_label)
         stats_box_layout.addWidget(self.std_label)
+        stats_box_layout.addWidget(self.var_label)
+        stats_box_layout.addWidget(self.kurt_label)
+        stats_box_layout.addWidget(self.skew_label)
+        stats_box_layout.addWidget(self.range_label)
+        stats_box_layout.addWidget(self.min_label)
+        stats_box_layout.addWidget(self.max_label)
+        stats_box_layout.addWidget(self.sum_label)
+        stats_box_layout.addWidget(self.count_label)
         stats_box.setLayout(stats_box_layout)
 
         #Ignore the box creation for now, since the graph box would just have 1 widget
@@ -161,36 +238,81 @@ class StatCalculator(QMainWindow):
         #Create some distribution options
         #Start with creating a check button.
         self.normal_checkbox = QCheckBox('Normal Distribution',self)
-        # We want to run the plotting routine for the distribution, but 
-        # we need to know the statistical values, so we'll calculate statistics
-        # first.
         self.normal_checkbox.stateChanged.connect(self.compute_stats)
         
-        #Repeat for additional distributions.
-        self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
-        self.log_normal_checkbox.stateChanged.connect(self.compute_stats)
+        self.hyp_sec_checkbox=QCheckBox('Hyperbolic Secant Distribution',self)
+        self.hyp_sec_checkbox.stateChanged.connect(self.compute_stats)
+        
+        self.gamma_checkbox=QCheckBox('Gamma Distribution',self)
+        self.gamma_checkbox.stateChanged.connect(self.compute_stats)
+        
+        self.chi2_checkbox=QCheckBox('Chi Squard Distribution',self)
+        self.chi2_checkbox.stateChanged.connect(self.compute_stats)
+        
+        self.beta_checkbox=QCheckBox('Beta Distribution',self)
+        self.beta_checkbox.stateChanged.connect(self.compute_stats)
+        
         
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
         distribution_box_layout.addWidget(self.normal_checkbox)
-        distribution_box_layout.addWidget(self.log_normal_checkbox)
+        distribution_box_layout.addWidget(self.hyp_sec_checkbox)
+        distribution_box_layout.addWidget(self.gamma_checkbox)
+        distribution_box_layout.addWidget(self.chi2_checkbox)
+        distribution_box_layout.addWidget(self.beta_checkbox)
         distribution_box.setLayout(distribution_box_layout)
 
+        #Now we can set all the previously defined boxes into the main window
+        label_box=QGroupBox("")
+        label_box_layout=QVBoxLayout()
+        #label_box_layout.addWidget(self.xaxis_label)
+        #label_box_layout.addWidget(self.yaxis_label)
+        label_box.setLayout(label_box_layout)
+
+        graph_box = QGroupBox("Data and Probability Graph")
+        graph_box_layout=QVBoxLayout()
+        graph_box_layout.addWidget(self.graph_canvas)
+        #graph_box_layout.addWidget(self.slider)
+        #graph_box_layout.addWidget(self.lcd)
+        graph_box.setLayout(graph_box_layout)
+        
         #Now we can set all the previously defined boxes into the main window
         grid_layout = QGridLayout()
         grid_layout.addWidget(table_box,0,0) 
         grid_layout.addWidget(stats_box,1,0)
-        grid_layout.addWidget(self.graph_canvas,0,1) 
+        grid_layout.addWidget(graph_box,0,1) 
         grid_layout.addWidget(distribution_box,1,1)
+        grid_layout.addWidget(label_box,0,2)
           
         main_widget.setLayout(grid_layout)
         self.setCentralWidget(main_widget)
         self.setWindowTitle('Plotting Probability Density Functions - Chris Vasquez')
         self.show()
-    
+
+#    def xaxis_fnc(self):
+        #d_labelx, submit=QInputDialog.getText(self,'Input Dialog','X-Axis Label')
+        #if submit:
+            #data_labelx=d_labelx
+            #self.compute_stats()
+            
+#    def yaxis_fnc(self):
+        #d_labely, submit=QInputDialog.getText(self,'Input Dialog','Y-Axis Label')
+        #if submit:
+            #data_labely=d_labely
+            #self.compute_stats()
+
+#    def slider_val(self, value):
+        #if value > 0:
+            #print(value)
+            #bin_count=value
+            #self.compute_stats()
+
+
     def load_data(self):        
         #for this example, we'll hard code the file name.
-        data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+        options=QFileDialog.Options()
+        options|=QFileDialog.DontUseNativeDialog
+        data_file_name, _ = QFileDialog.getOpenFileName(self,"Select CSV File", "", "All Files (*);;CSV Files (*.csv)", options=options)
         #for the assignment, have a dialog box provide the filename
 
         #check to see if the file exists and then load it
@@ -243,18 +365,63 @@ class StatCalculator(QMainWindow):
             data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
             stdev_value = np.std(data_array)
+            median_value=np.median(data_array)
+            var_value=np.var(data_array)
+            range_value=np.ptp(data_array)
+            min_value=np.amin(data_array)
+            max_value=np.amax(data_array)
+            sum_value=np.sum(data_array)
+            stderr_value=stats.sem(data_array)
+            kurt_value=stats.kurtosis(data_array)
+            skew_value=stats.skew(data_array)
+            count_value=sum_value/mean_value
+            mode_array=stats.mode(data_array)
+            mode_array2=np.array(mode_array)
+            mode_value=mode_array2[0]
+            
+            #hyperbolic secant values
+            bpara_value=stdev_value*2/3.14159
             
             print("Mean = {0:5f}".format(mean_value))
-            self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
+            
+            
+            self.mean_label.setText("Mean = {:0.4f}".format(mean_value))
             self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
+            self.median_label.setText("Median = {:0.4f}".format(median_value))
+            self.var_label.setText("Variance = {:0.4f}".format(var_value))
+            self.range_label.setText("Range = {:0.4f}".format(range_value))
+            self.min_label.setText("Min = {:0.4f}".format(min_value))
+            self.max_label.setText("Max = {:0.4f}".format(max_value))
+            self.sum_label.setText("Sum = {:0.4f}".format(sum_value))
+            self.stderr_label.setText("Std Error = {:0.4f}".format(stderr_value))
+            self.kurt_label.setText("Kurtosis = {:0.4f}".format(kurt_value))
+            self.skew_label.setText("Skew = {:0.4f}".format(skew_value))
+            self.count_label.setText("Count = {:0.4f}".format(count_value))
+            self.mode_label.setText("Mode = {:0.4f}".format(mode_value[0]))
             
             self.graph_canvas.plot_histogram(data_array)
+            
+            
+            
             if self.normal_checkbox.isChecked():
-                self.graph_canvas.plot_random_variable(data_array,norm)
-            if self.log_normal_checkbox.isChecked():
-                self.graph_canvas.plot_random_variable(data_array,lognorm)
-                #add more distributions here
-        
+                self.graph_canvas.plot_normal(mean_value,stdev_value)
+                
+            if self.hyp_sec_checkbox.isChecked():                
+                self.graph_canvas.plot_hypsec(mean_value,bpara_value)
+                
+            if self.gamma_checkbox.isChecked():
+                gam_value=stats.gamma.fit(data_array)
+                self.graph_canvas.plot_gamma(gam_value[0],gam_value[1],gam_value[2])
+            
+            if self.chi2_checkbox.isChecked():
+                chi2_value=stats.chi2.fit(data_array)
+                self.graph_canvas.plot_chi2(chi2_value[0],chi2_value[1],chi2_value[2],mean_value,stdev_value)
+            
+            if self.beta_checkbox.isChecked():
+                beta_value=stats.beta.fit(data_array)
+                self.graph_canvas.plot_beta(beta_value[0],beta_value[1],beta_value[2],beta_value[3],mean_value,stdev_value)
+           
+           
 '''       
   1. Add the ability to plot a normalized Histogram of the selected data in the table.
   2. Add a menu option to open a CSV data file.
