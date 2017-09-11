@@ -92,12 +92,11 @@ class MyDynamicMplCanvas(MyMplCanvas):
         elif rv.name == 'norm':
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
         elif rv.name == 't':
-          y = rv.pdf(x, df = np.sum(data) / np.mean(data), loc = data_mean, scale = data_sigma)
-#==============================================================================
-#         elif rv.name == 'f':
-#           df1 = np.sum(data)
-#           y = rv.pdf(x, )
-#==============================================================================
+          y = rv.pdf(x, df = np.sum(data) / np.mean(data) - 1, loc = data_mean, scale = data_sigma)
+        elif rv.name == 'f':
+          print('here')
+          df1 = df2 = np.sum(data) / np.mean(data) / 2 - 1
+          y = rv.pdf(x, df1, df2, loc = data_mean, scale = data_sigma)
          
           
         self.axes.plot(x,y,label=rv.name)
@@ -240,7 +239,7 @@ class StatCalculator(QMainWindow):
         self.chi_checkbox = QCheckBox('Chi Distribution',self)
         self.pearson_checkbox = QCheckBox('Pearson 3 Distribution',self)
         self.students_t_checkbox = QCheckBox('Student\'s t Distribution',self)
-        self.f_checkbox = QCheckBox('Student\'s t Distribution',self)
+        self.f_checkbox = QCheckBox('f Distribution',self)
         # We want to run the plotting routine for the distribution, but 
         # we need to know the statistical values, so we'll calculate statistics
         # first.
@@ -371,7 +370,7 @@ class StatCalculator(QMainWindow):
             if self.students_t_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.t)
             if self.f_checkbox.isChecked():
-                self.graph_canvas.plot_random_variable(data_array.st.f)
+                self.graph_canvas.plot_random_variable(data_array,st.f)
             
             # Old way
 #==============================================================================
