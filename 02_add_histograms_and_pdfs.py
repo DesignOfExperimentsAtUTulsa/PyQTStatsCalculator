@@ -93,6 +93,11 @@ class MyDynamicMplCanvas(MyMplCanvas):
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
         elif rv.name == 't':
           y = rv.pdf(x, df = np.sum(data) / np.mean(data), loc = data_mean, scale = data_sigma)
+#==============================================================================
+#         elif rv.name == 'f':
+#           df1 = np.sum(data)
+#           y = rv.pdf(x, )
+#==============================================================================
          
           
         self.axes.plot(x,y,label=rv.name)
