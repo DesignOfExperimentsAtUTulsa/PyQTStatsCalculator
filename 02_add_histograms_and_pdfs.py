@@ -294,7 +294,7 @@ class StatCalculator(QMainWindow):
             data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
             std_dev_value = np.std(data_array)
-#            error_value = st.stats.sem(data_array)
+            error_value = st.stats.sem(data_array)
             median_value = np.median(data_array)
             mode_value = sts.mode(data_array)
             variance_value = np.var(data_array)
@@ -309,7 +309,7 @@ class StatCalculator(QMainWindow):
             self.std_dev_label.setText("Std Dev = {:0.4f}".format(std_dev_value))
             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
             # Commented error_label out because it was causing the histogram not to show up
-#            self.error_label.setText("Standard error = {:0.3f}".format(error_value))
+            self.error_label.setText("Standard error = {:0.3f}".format(error_value))
             self.median_label.setText("Median = {:0.3f}".format(median_value))
             self.mode_label.setText("Mode = {:0.3f}".format(mode_value))
             self.variance_label.setText("Variance = {:0.3f}".format(variance_value))
