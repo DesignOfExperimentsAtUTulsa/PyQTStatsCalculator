@@ -79,17 +79,16 @@ class MyDynamicMplCanvas(MyMplCanvas):
         data_mean = np.mean(data)
         data_sigma = np.std(data)
         xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
-        print(rv.fit(data))
+        points = 100
+        x = np.linspace(xmin,xmax, points) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
         # use fit to calculate parameter estimates
         params = rv.fit(data)
-        print(rv.name)
         
         if rv.name =='lognorm':
           #s is the shape parameter
           # See https://en.wikipedia.org/wiki/Log-normal_distribution
           # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
-          s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
+#          s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
           #shift to only use positive numbers
 #          y = rv.pdf(x,s,loc=0,scale=data_sigma)
 #          y = rv.pdf(x,data_sigma,loc=0,scale=np.exp(data_mean))
@@ -99,7 +98,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         elif rv.name == 't':
           y = rv.pdf(x, df = np.sum(data) / np.mean(data) - 1, loc = data_mean, scale = data_sigma)
         elif rv.name == 'f':
-          df1 = df2 = np.sum(data) / np.mean(data) / 2 - 1
+          df1 = np.sum(data) / np.mean(data) / 2 - 1
           y = rv.pdf(x, df1, 10, loc = 0, scale = data_sigma)
 #           y = rv.pdf(x,params[0],params[1],params[2],params[3])
         # Chi works great for some data selections (i.e. all Tmax) and lousy for others (i.e. all Tmin) with no apparent pattern
@@ -109,57 +108,70 @@ class MyDynamicMplCanvas(MyMplCanvas):
           y = rv.pdf(x,params[0], params[1])
         elif rv.name == 'pearson3':
           y = rv.pdf(x, st.skew(data), loc = data_mean, scale = data_sigma)
-         
           
+        self.check_plot(xmax - xmin, y, points)
         self.axes.plot(x,y,label=rv.name)
         self.axes.legend(shadow=True)
         self.draw()
+        
+    # method for checking whether the area under a distribution is equal to one using a Riemann sum.
+    # used for debugging.
+    # currently all distributions are close to 1.0 except exponential (expected given the range used)
+    def check_plot(self,xRange,yVals,numPoints):
+        area = 0
+        width = xRange / numPoints
+        for i in range(1,numPoints):
+            area += yVals[i] * width
+        print('The area under this curve is: {:0.3f}'.format(area))
           
-    def plot_normal(self,mu,sigma):
-        xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
-        y = mlab.normpdf(x, mu, sigma)
-        self.axes.plot(x,y,label="Normal")
-        self.axes.legend(shadow=True)
-        self.draw()
-        print("Finished Drawing Normal Distribution.")
-        
-    def plot_log_normal(self,mu,sigma):
-        xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
-        y = st.lognorm.pdf(x, sigma)
-        self.axes.plot(x,y,label="Log-Normal")
-        self.axes.legend(shadow=True)
-        self.draw()
-        print("Finished Drawing Log-Normal Distribution.")
-        
-    def plot_exponential(self,mu,sigma):
-        xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma,100)
-        y = st.expon.pdf(x)
-        self.axes.plot(x,y,label="Exponential")
-        self.axes.legend(shadow=True)
-        self.draw()
-        print("Finished Drawing Exponential Distribution.")
-        
-    def plot_chi(self,mu,sigma):
-        xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma,100)
-        y = st.chi.pdf(x,2,loc = mu)
-        print("Made it!")
-        self.axes.plot(x,y,label="Chi")
-        self.axes.legend(shadow=True)
-        self.draw()
-        print("Finished Drawing Chi Distribution.")
-        
-    def plot_pearson(self,mu,sigma,skew):
-        xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma,100)
-        y = st.pearson3.pdf(x,skew,loc=mu)
-        self.axes.plot(x,y,label="Pearson 3")
-        self.axes.legend(shadow=True)
-        self.draw()
-        print("Finished Drawing Pearson 3 Distribution.")
+        # obsolete: use separate methods for each distribution
+#==============================================================================
+#     def plot_normal(self,mu,sigma):
+#         xmin,xmax = self.axes.get_xlim()
+#         x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
+#         y = mlab.normpdf(x, mu, sigma)
+#         self.axes.plot(x,y,label="Normal")
+#         self.axes.legend(shadow=True)
+#         self.draw()
+#         print("Finished Drawing Normal Distribution.")
+#         
+#     def plot_log_normal(self,mu,sigma):
+#         xmin,xmax = self.axes.get_xlim()
+#         x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
+#         y = st.lognorm.pdf(x, sigma)
+#         self.axes.plot(x,y,label="Log-Normal")
+#         self.axes.legend(shadow=True)
+#         self.draw()
+#         print("Finished Drawing Log-Normal Distribution.")
+#         
+#     def plot_exponential(self,mu,sigma):
+#         xmin,xmax = self.axes.get_xlim()
+#         x = np.linspace(mu-3*sigma,mu+3*sigma,100)
+#         y = st.expon.pdf(x)
+#         self.axes.plot(x,y,label="Exponential")
+#         self.axes.legend(shadow=True)
+#         self.draw()
+#         print("Finished Drawing Exponential Distribution.")
+#         
+#     def plot_chi(self,mu,sigma):
+#         xmin,xmax = self.axes.get_xlim()
+#         x = np.linspace(mu-3*sigma,mu+3*sigma,100)
+#         y = st.chi.pdf(x,2,loc = mu)
+#         print("Made it!")
+#         self.axes.plot(x,y,label="Chi")
+#         self.axes.legend(shadow=True)
+#         self.draw()
+#         print("Finished Drawing Chi Distribution.")
+#         
+#     def plot_pearson(self,mu,sigma,skew):
+#         xmin,xmax = self.axes.get_xlim()
+#         x = np.linspace(mu-3*sigma,mu+3*sigma,100)
+#         y = st.pearson3.pdf(x,skew,loc=mu)
+#         self.axes.plot(x,y,label="Pearson 3")
+#         self.axes.legend(shadow=True)
+#         self.draw()
+#         print("Finished Drawing Pearson 3 Distribution.")
+#==============================================================================
         
         
 class StatCalculator(QMainWindow):
@@ -301,11 +313,11 @@ class StatCalculator(QMainWindow):
     
     def load_data(self):        
        #for this example, we'll hard code the file name.
-       data_file_name = "Historical Temperatures from Moose Wyoming.csv"
-#       data_file_name = QFileDialog.getOpenFileName(QWidget())
+#       data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+       data_file_name = QFileDialog.getOpenFileName(QWidget())
        header_row = 1 
        #load data file into memory as a list of lines       
-       with open(data_file_name,'r') as data_file: #add index back when hard-coded name is removed
+       with open(data_file_name[0],'r') as data_file: 
             self.data_lines = data_file.readlines()
         
        print("Opened {}".format(data_file_name[0]))
@@ -388,6 +400,7 @@ class StatCalculator(QMainWindow):
                 self.graph_canvas.plot_random_variable(data_array,st.expon)
             if self.pearson_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.pearson3)
+
             # Old way using separate methods for each distribution
 #==============================================================================
 #             if self.normal_checkbox.isChecked():
