@@ -91,16 +91,13 @@ class MyDynamicMplCanvas(MyMplCanvas):
         elif rv.name == 'norm':
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
         elif rv.name == 't':
-<<<<<<< HEAD
           y = rv.pdf(x, df = np.sum(data) / np.mean(data), loc = data_mean, scale = data_sigma)
 #==============================================================================
 #         elif rv.name == 'f':
 #           df1 = np.sum(data)
 #           y = rv.pdf(x, )
 #==============================================================================
-=======
           y = rv.pdf(x, loc = data_mean, scale = data_sigma)
->>>>>>> parent of d14542d... Added t-distribution
          
           
         self.axes.plot(x,y,label=rv.name)
