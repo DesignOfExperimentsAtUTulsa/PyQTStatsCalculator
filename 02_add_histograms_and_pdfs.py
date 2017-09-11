@@ -63,7 +63,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.set_title("Title")
              
     def plot_histogram(self,data_array,data_label="Temperature (deg F)",
-                       title="Probability Density Function Plots",bins=100):
+                       title="Probability Density Function Plots",bins=50):
         self.axes.cla() #Clear axes
         self.axes.hist(data_array,bins=bins,
                        normed=True,label="Empirical",
@@ -74,6 +74,26 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Normalized Histogram.")
+        
+    def plot_random_variable(self,data,rv):
+        data_mean = np.mean(data)
+        data_sigma = np.std(data)
+        xmin,xmax = self.axes.get_xlim()
+        x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
+        
+        if rv.name =='lognorm':
+          #s is the shape parameter
+          # See https://en.wikipedia.org/wiki/Log-normal_distribution
+          # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
+          s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
+          #shift to only use positive numbers
+          y = rv.pdf(x,s,loc=0,scale=data_sigma)
+        else:
+          y = rv.pdf(x,loc=data_mean,scale=data_sigma)
+          
+        self.axes.plot(x,y,label=rv.name)
+        self.axes.legend(shadow=True)
+        self.draw()
           
     def plot_normal(self,mu,sigma):
         xmin,xmax = self.axes.get_xlim()
@@ -149,6 +169,7 @@ class StatCalculator(QMainWindow):
         
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
         self.median_label = QLabel("Median: Not Computed Yet",self)
+        self.error_label = QLabel("Standard error: Not Computed Yet",self)
         self.mode_label = QLabel("Mode: Not Computed Yet",self)
         self.std_dev_label = QLabel("Standard deviation: Not Computed Yet",self)
         self.variance_label = QLabel("Variance: Not Computed Yet",self)
@@ -184,6 +205,7 @@ class StatCalculator(QMainWindow):
         stats_box_layout = QVBoxLayout()
         stats_box_layout.addWidget(self.mean_label)
         stats_box_layout.addWidget(self.std_dev_label)
+        stats_box_layout.addWidget(self.error_label)
         stats_box_layout.addWidget(self.mode_label)
         stats_box_layout.addWidget(self.median_label)
         stats_box_layout.addWidget(self.variance_label)
@@ -294,7 +316,7 @@ class StatCalculator(QMainWindow):
             data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
             std_dev_value = np.std(data_array)
-            error_value = st.stats.sem(data_array)
+            error_value = st.sem(data_array)
             median_value = np.median(data_array)
             mode_value = sts.mode(data_array)
             variance_value = np.var(data_array)
@@ -308,7 +330,6 @@ class StatCalculator(QMainWindow):
             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
             self.std_dev_label.setText("Std Dev = {:0.4f}".format(std_dev_value))
             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
-            # Commented error_label out because it was causing the histogram not to show up
             self.error_label.setText("Standard error = {:0.3f}".format(error_value))
             self.median_label.setText("Median = {:0.3f}".format(median_value))
             self.mode_label.setText("Mode = {:0.3f}".format(mode_value))
@@ -323,6 +344,14 @@ class StatCalculator(QMainWindow):
             
             
             self.graph_canvas.plot_histogram(data_array)
+            
+            # New way
+            if self.normal_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,norm)
+            if self.log_normal_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,lognorm)
+            
+            # Old way
             if self.normal_checkbox.isChecked():
                 self.graph_canvas.plot_normal(mean_value,std_dev_value)
             if self.log_normal_checkbox.isChecked():
