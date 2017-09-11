@@ -80,7 +80,9 @@ class MyDynamicMplCanvas(MyMplCanvas):
         data_sigma = np.std(data)
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
-        
+        print(rv.fit(data))
+        # use fit to calculate parameter estimates
+        params = rv.fit(data)
         
         if rv.name =='lognorm':
           #s is the shape parameter
@@ -88,15 +90,22 @@ class MyDynamicMplCanvas(MyMplCanvas):
           # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
           s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
           #shift to only use positive numbers
-          y = rv.pdf(x,s,loc=0,scale=data_sigma)
+#          y = rv.pdf(x,s,loc=0,scale=data_sigma)
+#          y = rv.pdf(x,data_sigma,loc=0,scale=np.exp(data_mean))
+          y = rv.pdf(x,params[0],params[1],params[2])
         elif rv.name == 'norm':
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
         elif rv.name == 't':
           y = rv.pdf(x, df = np.sum(data) / np.mean(data) - 1, loc = data_mean, scale = data_sigma)
         elif rv.name == 'f':
-          print('here')
           df1 = df2 = np.sum(data) / np.mean(data) / 2 - 1
-          y = rv.pdf(x, df1, df2, loc = data_mean, scale = data_sigma)
+          y = rv.pdf(x, df1, 10, loc = 0, scale = data_sigma)
+#           y = rv.pdf(x,params[0],params[1],params[2],params[3])
+        # Chi works great for some data selections (i.e. all Tmax) and lousy for others (i.e. all Tmin) with no apparent pattern
+        elif rv.name == 'chi':
+          y = rv.pdf(x, params[0], params[1], params[2])
+        elif rv.name == 'exponential':
+          y = rv.pdf(x,params[0], params[1], params[2])
          
           
         self.axes.plot(x,y,label=rv.name)
@@ -289,11 +298,11 @@ class StatCalculator(QMainWindow):
     
     def load_data(self):        
        #for this example, we'll hard code the file name.
-       #data_file_name = "Historical Temperatures from Moose Wyoming.csv"
-       data_file_name = QFileDialog.getOpenFileName(QWidget())
+       data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+#       data_file_name = QFileDialog.getOpenFileName(QWidget())
        header_row = 1 
        #load data file into memory as a list of lines       
-       with open(data_file_name[0],'r') as data_file:
+       with open(data_file_name,'r') as data_file: #add index back when hard-coded name is removed
             self.data_lines = data_file.readlines()
         
        print("Opened {}".format(data_file_name[0]))
@@ -371,6 +380,8 @@ class StatCalculator(QMainWindow):
                 self.graph_canvas.plot_random_variable(data_array,st.t)
             if self.f_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.f)
+            if self.chi_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,st.chi)
             
             # Old way
 #==============================================================================
