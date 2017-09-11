@@ -88,8 +88,11 @@ class MyDynamicMplCanvas(MyMplCanvas):
           s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
           #shift to only use positive numbers
           y = rv.pdf(x,s,loc=0,scale=data_sigma)
-        else:
+        elif rv.name == 'norm':
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
+        elif rv.name == 't':
+          y = rv.pdf(x, loc = data_mean, scale = data_sigma)
+         
           
         self.axes.plot(x,y,label=rv.name)
         self.axes.legend(shadow=True)
@@ -122,7 +125,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.draw()
         print("Finished Drawing Exponential Distribution.")
         
-    def plot_students_t(self,mu,sigma):
+    def plot_chi(self,mu,sigma):
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma,mu+3*sigma,100)
         y = st.chi.pdf(x,2,loc = mu)
@@ -226,16 +229,19 @@ class StatCalculator(QMainWindow):
         #Create some distribution options
         #Start with creating a check button.
         self.normal_checkbox = QCheckBox('Normal Distribution',self)
-        # We want to run the plotting routine for the distribution, but 
-        # we need to know the statistical values, so we'll calculate statistics
-        # first.
-        self.normal_checkbox.stateChanged.connect(self.compute_stats)
-        
-        #Repeat for additional distributions.
         self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
         self.exponential_checkbox = QCheckBox('Exponential Distribution',self)
         self.chi_checkbox = QCheckBox('Chi Distribution',self)
         self.pearson_checkbox = QCheckBox('Pearson 3 Distribution',self)
+        # We want to run the plotting routine for the distribution, but 
+        # we need to know the statistical values, so we'll calculate statistics
+        # first.
+        self.normal_checkbox.stateChanged.connect(self.compute_stats)
+        self.log_normal_checkbox.stateChanged.connect(self.compute_stats)
+        self.exponential_checkbox.stateChanged.connect(self.compute_stats)
+        self.chi_checkbox.stateChanged.connect(self.compute_stats)
+        self.pearson_checkbox.stateChanged.connect(self.compute_stats)
+
         
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
@@ -347,21 +353,23 @@ class StatCalculator(QMainWindow):
             
             # New way
             if self.normal_checkbox.isChecked():
-                self.graph_canvas.plot_random_variable(data_array,norm)
+                self.graph_canvas.plot_random_variable(data_array,st.norm)
             if self.log_normal_checkbox.isChecked():
-                self.graph_canvas.plot_random_variable(data_array,lognorm)
+                self.graph_canvas.plot_random_variable(data_array,st.lognorm)
             
             # Old way
-            if self.normal_checkbox.isChecked():
-                self.graph_canvas.plot_normal(mean_value,std_dev_value)
-            if self.log_normal_checkbox.isChecked():
-                self.graph_canvas.plot_log_normal(mean_value,std_dev_value)
-            if self.exponential_checkbox.isChecked():
-                self.graph_canvas.plot_exponential(mean_value,std_dev_value)
-            if self.chi_checkbox.isChecked():
-                self.graph_canvas.plot_students_t(mean_value,std_dev_value)
-            if self.pearson_checkbox.isChecked():
-                self.graph_canvas.plot_pearson(mean_value,std_dev_value,skewness_value)
+#==============================================================================
+#             if self.normal_checkbox.isChecked():
+#                 self.graph_canvas.plot_normal(mean_value,std_dev_value)
+#             if self.log_normal_checkbox.isChecked():
+#                 self.graph_canvas.plot_log_normal(mean_value,std_dev_value)
+#             if self.exponential_checkbox.isChecked():
+#                 self.graph_canvas.plot_exponential(mean_value,std_dev_value)
+#             if self.chi_checkbox.isChecked():
+#                 self.graph_canvas.plot_chi(mean_value,std_dev_value)
+#             if self.pearson_checkbox.isChecked():
+#                 self.graph_canvas.plot_pearson(mean_value,std_dev_value,skewness_value)
+#==============================================================================
                 
                 #add more distributions here
         
