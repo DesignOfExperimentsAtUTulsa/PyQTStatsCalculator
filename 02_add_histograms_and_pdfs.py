@@ -83,6 +83,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         print(rv.fit(data))
         # use fit to calculate parameter estimates
         params = rv.fit(data)
+        print(rv.name)
         
         if rv.name =='lognorm':
           #s is the shape parameter
@@ -104,8 +105,10 @@ class MyDynamicMplCanvas(MyMplCanvas):
         # Chi works great for some data selections (i.e. all Tmax) and lousy for others (i.e. all Tmin) with no apparent pattern
         elif rv.name == 'chi':
           y = rv.pdf(x, params[0], params[1], params[2])
-        elif rv.name == 'exponential':
-          y = rv.pdf(x,params[0], params[1], params[2])
+        elif rv.name == 'expon':
+          y = rv.pdf(x,params[0], params[1])
+        elif rv.name == 'pearson3':
+          y = rv.pdf(x, st.skew(data), loc = data_mean, scale = data_sigma)
          
           
         self.axes.plot(x,y,label=rv.name)
@@ -368,10 +371,9 @@ class StatCalculator(QMainWindow):
             self.sum_label.setText("Sum = {:0.3f}".format(sum_value))
             self.count_label.setText("Count = {:0.3f}".format(sum_value / mean_value))
             
-            
             self.graph_canvas.plot_histogram(data_array)
             
-            # New way
+            # New way using plot_random_variable
             if self.normal_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.norm)
             if self.log_normal_checkbox.isChecked():
@@ -382,8 +384,11 @@ class StatCalculator(QMainWindow):
                 self.graph_canvas.plot_random_variable(data_array,st.f)
             if self.chi_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.chi)
-            
-            # Old way
+            if self.exponential_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,st.expon)
+            if self.pearson_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,st.pearson3)
+            # Old way using separate methods for each distribution
 #==============================================================================
 #             if self.normal_checkbox.isChecked():
 #                 self.graph_canvas.plot_normal(mean_value,std_dev_value)
