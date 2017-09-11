@@ -81,6 +81,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         xmin,xmax = self.axes.get_xlim()
         x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
         
+        
         if rv.name =='lognorm':
           #s is the shape parameter
           # See https://en.wikipedia.org/wiki/Log-normal_distribution
@@ -98,9 +99,12 @@ class MyDynamicMplCanvas(MyMplCanvas):
 #           df1 = np.sum(data)
 #           y = rv.pdf(x, )
 #==============================================================================
+<<<<<<< HEAD
           y = rv.pdf(x, loc = data_mean, scale = data_sigma)
 =======
 >>>>>>> parent of 3c7b7a1... Messed something up
+=======
+>>>>>>> parent of dd26fce... Revert "Added t-distribution"
          
           
         self.axes.plot(x,y,label=rv.name)
@@ -242,6 +246,8 @@ class StatCalculator(QMainWindow):
         self.exponential_checkbox = QCheckBox('Exponential Distribution',self)
         self.chi_checkbox = QCheckBox('Chi Distribution',self)
         self.pearson_checkbox = QCheckBox('Pearson 3 Distribution',self)
+        self.students_t_checkbox = QCheckBox('Student\'s t Distribution',self)
+        self.f_checkbox = QCheckBox('Student\'s t Distribution',self)
         # We want to run the plotting routine for the distribution, but 
         # we need to know the statistical values, so we'll calculate statistics
         # first.
@@ -250,6 +256,8 @@ class StatCalculator(QMainWindow):
         self.exponential_checkbox.stateChanged.connect(self.compute_stats)
         self.chi_checkbox.stateChanged.connect(self.compute_stats)
         self.pearson_checkbox.stateChanged.connect(self.compute_stats)
+        self.students_t_checkbox.stateChanged.connect(self.compute_stats)
+        self.f_checkbox.stateChanged.connect(self.compute_stats)
 
         
         distribution_box = QGroupBox("Distribution Functions")
@@ -259,6 +267,8 @@ class StatCalculator(QMainWindow):
         distribution_box_layout.addWidget(self.exponential_checkbox)
         distribution_box_layout.addWidget(self.chi_checkbox)
         distribution_box_layout.addWidget(self.pearson_checkbox)
+        distribution_box_layout.addWidget(self.students_t_checkbox)
+        distribution_box_layout.addWidget(self.f_checkbox)
         distribution_box.setLayout(distribution_box_layout)
 
         #Now we can set all the previously defined boxes into the main window
@@ -365,6 +375,10 @@ class StatCalculator(QMainWindow):
                 self.graph_canvas.plot_random_variable(data_array,st.norm)
             if self.log_normal_checkbox.isChecked():
                 self.graph_canvas.plot_random_variable(data_array,st.lognorm)
+            if self.students_t_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,st.t)
+            if self.f_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array.st.f)
             
             # Old way
 #==============================================================================
