@@ -87,22 +87,28 @@ class MyDynamicMplCanvas(MyMplCanvas):
         if rv.name =='lognorm':
           s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
           y = rv.pdf(x,s,loc=0,scale=data_sigma)
+          line = '-k'
         elif rv.name =='norm':
           y = rv.pdf(x,loc=data_mean,scale=data_sigma)
+          line = '-.k'
         elif rv.name =='expon':
           y = rv.pdf(x,loc=0,scale=data_sigma)
+          line = '--k'
         elif rv.name =='t':
           df = 2*data_sigma**2/(data_sigma**2-1)
           y = rv.pdf(x,df,loc=data_mean,scale=data_sigma)
+          line = ':k'
         elif rv.name =='chi2':
           chi2_df = df
+          line = '-.k'
           y = rv.pdf(x,chi2_df,loc=0)#,scale=data_sigma)
         elif rv.name =='f':
           dfn = df
           dfd = df2
           y = rv.pdf(x,dfn,dfd,loc=0,scale=data_sigma)
+          line = ''
            
-        self.axes.plot(x,y,label=rv.name)
+        self.axes.plot(x,y,line,label=rv.name)
         self.axes.legend(loc=0,shadow=True)
         self.draw()
    
