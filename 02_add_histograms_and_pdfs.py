@@ -9,6 +9,11 @@ import subprocess, os
 import numpy as np
 import statistics, math
 from scipy import stats #only currently works with winPython cmd
+from scipy.stats import norm
+from scipy.stats import lognorm
+from scipy.stats import alpha
+from scipy.stats import beta
+from scipy.stats import chi2
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.mlab as mlab
@@ -59,6 +64,37 @@ class PlotCanvas(FigureCanvas):
 		self.axes.legend(shadow=True) #shows legend
 		self.draw() #draws graph
 		print("Finished Drawing Normalized Histogram.")
+
+	def plotRandomVariable(self, data, randomValueType):
+		mean = np.mean(data) #stores mean of data
+		sigma = np.std(data) #stores standard deviation of data
+		xmin, xmax = self.axes.get_xlim() #gets x-axis limits
+		x = np.linspace(xmin, xmax, 100) #benefit to this over sigma/mu formula?
+
+		if randomValueType.name == 'lognorm':
+			shapeParameter = np.sqrt(np.log(1+sigma**2/mean**2)) #from loc normal formula on wiki
+			scl = mean/math.sqrt(1+sigma**2/mean**2) #formula from wiki e^mean
+			print("SCALE : " + str(scl)) #still not sure why scale set to sigma in example
+			print("Sigma : " + str(sigma))
+			y = randomValueType.pdf(x,shapeParameter,loc=0,scale=scl)
+		elif randomValueType.name == 'alpha':
+			print("Alpha")
+		elif randomValueType.name == 'beta':
+			print("Beta")
+			alpha = ((1- mean)/sigma**2 - 1/mean)*mean**2
+			beta = alpha*(1/mean-1)
+			print(alpha)
+			print(beta)
+			y = randomValueType.pdf(x, alpha, beta)
+		elif randomValueType.name == 'chi2':
+			print("Chi2")
+		else:
+			y = randomValueType.pdf(x,loc=mean,scale=sigma)
+			
+		self.axes.plot(x,y,label=randomValueType.name)
+		self.axes.legend(shadow=True)
+		self.draw()
+
 
 	def plotNormal(self, mu, sigma): #plots the normal distribution of the current selected data
 		xmin, xmax = self.axes.get_xlim() #stores current x-axis limits
@@ -442,17 +478,22 @@ class StatMagic (QMainWindow):
 		self.graph.plotHistogram(dataArray) #plots the histogram with the data
 		if self.normalCheckbox.isChecked(): #if the box is checked
 			try:
-				self.graph.plotNormal(meanValue, stdDeviationValue) #plots the normal distribution
+				self.graph.plotRandomVariable(dataArray, norm)
+				#self.graph.plotNormal(meanValue, stdDeviationValue) #plots the normal distribution
 			except:
 				pass
 		if self.logNormalCheckbox.isChecked(): #if log normal is checked
-			self.graph.plotLogNormal(meanValue, stdDeviationValue) #plots log normal distribution
+			self.graph.plotRandomVariable(dataArray, lognorm)
+			#self.graph.plotLogNormal(meanValue, stdDeviationValue) #plots log normal distribution
 		if self.alphaCheckbox.isChecked(): #if alpha is checked
-			self.graph.plotAlpha(meanValue, stdDeviationValue, self.alphaAlpha) #plots alpha distribution
+			self.graph.plotRandomVariable(dataArray, alpha)
+			#self.graph.plotAlpha(meanValue, stdDeviationValue, self.alphaAlpha) #plots alpha distribution
 		if self.betaCheckbox.isChecked(): #if beta is checked
-			self.graph.plotBeta(meanValue, stdDeviationValue, self.alphaBeta, self.beta) #plots beta distribution
+			self.graph.plotRandomVariable(dataArray, beta)
+			#self.graph.plotBeta(meanValue, stdDeviationValue, self.alphaBeta, self.beta) #plots beta distribution
 		if self.chiSquaredCheckbox.isChecked(): #if chi2 is checked
-			self.graph.plotChiSquared(meanValue, stdDeviationValue, self.degreesOfFreedom) #plots chi2 distribution
+			self.graph.plotRandomVariable(dataArray, chi2)
+			#self.graph.plotChiSquared(meanValue, stdDeviationValue, self.degreesOfFreedom) #plots chi2 distribution
 
 if __name__ == '__main__':
 	app = QCoreApplication.instance() #references instance of app if it exists
