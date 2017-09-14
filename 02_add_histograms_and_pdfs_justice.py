@@ -93,12 +93,12 @@ class MyDynamicMplCanvas(MyMplCanvas):
         print("called")
         xmin, xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
-        scale = np.exp(mu)
+        scale = 1
         loc = 0
         y = lognorm.pdf(x, sigma, loc, scale)
         self.axes.plot(x,y,label="Log Normal")
         self.axes.legend(shadow=True)
-        self.draw
+        self.draw()
         print("Finished Drawing Lognormal Distribution")
         
     def plot_chi(self, mu, sigma):
@@ -110,7 +110,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         y = chi2.pdf(x, df, loc, scale)
         self.axes.plot(x,y,label="Chi Squared")
         self.axes.legend(shadow=True)
-        self.draw
+        self.draw()
         print("Finished Drawing Chi Squared Distribution")
         
     def plot_tukeylambda(self, mu, sigma):
@@ -120,7 +120,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         y = tukeylambda.pdf(x, lam, loc= 0)
         self.axes.plot(x,y,label="Chi Squared")
         self.axes.legend(shadow=True)
-        self.draw
+        self.draw()
         print("Finished Drawing Tukey Lambda Distribution")
         
     def plot_binom(self, mu, sigma):
@@ -131,7 +131,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         y = binom.ppf(x, n, p)
         self.axes.plot(x,y,label="Chi Squared")
         self.axes.legend(shadow=True)
-        self.draw
+        self.draw()
         print("Finished Drawing Binomial Distribution")   
         
 class StatCalculator(QWidget):
@@ -285,7 +285,7 @@ class StatCalculator(QWidget):
                self.data_table.setItem(current_row,col,entry)
         print("Filled {} rows.".format(row))
         
-        self.compute_stats(data_table_columns)
+        self.compute_stats()
     
     def compute_stats(self):
         
