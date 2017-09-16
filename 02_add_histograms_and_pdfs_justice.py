@@ -14,18 +14,22 @@ from PyQt5.QtGui import QIcon
 import numpy as np
 import scipy
 
+from scipy import stats
+
 from scipy.stats import lognorm
 from scipy.stats import chi2
-from scipy.stats import tukeylambda
-from scipy.stats import binom
+from scipy.stats import semicircular
+from scipy.stats import gamma
 
 import os
+import math
  
 from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import rcParams
 import matplotlib.mlab as mlab
+
 
 rcParams.update({'figure.autolayout': True})
 
@@ -89,50 +93,41 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.draw()
         print("Finished Drawing Normal Distribution.")
         
-    def plot_lognormal(self,mu, sigma):
-        print("called")
+    def plot_lognormal(self,mu, sigma, shape, loc, scale):
         xmin, xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
-        scale = 1
-        loc = 0
-        y = lognorm.pdf(x, sigma, loc, scale)
+        y = lognorm.pdf(x, shape, loc, scale)
         self.axes.plot(x,y,label="Log Normal")
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Lognormal Distribution")
         
-    def plot_chi(self, mu, sigma):
+    def plot_chi(self, mu, sigma, df, loc, scale):
         xmin, xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
-        df = 100
-        loc = 0
-        scale = 1
         y = chi2.pdf(x, df, loc, scale)
         self.axes.plot(x,y,label="Chi Squared")
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Chi Squared Distribution")
         
-    def plot_tukeylambda(self, mu, sigma):
+    def plot_semicircular(self, mu, sigma, loc, scale):
         xmin, xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
-        lam = 1
-        y = tukeylambda.pdf(x, lam, loc= 0)
-        self.axes.plot(x,y,label="Chi Squared")
+        y = semicircular.pdf(x, loc, scale)
+        self.axes.plot(x,y,label="Semi Circular")
         self.axes.legend(shadow=True)
         self.draw()
-        print("Finished Drawing Tukey Lambda Distribution")
+        print("Finished Drawing Semi Circular Distribution")
         
-    def plot_binom(self, mu, sigma):
+    def plot_gamma(self, mu, sigma, a, loc, scale):
         xmin, xmax = self.axes.get_xlim()
         x = np.linspace(mu-3*sigma, mu+3*sigma, 100)
-        n = 1
-        p = 1
-        y = binom.ppf(x, n, p)
-        self.axes.plot(x,y,label="Chi Squared")
+        y = gamma.pdf(x, a, loc, scale)
+        self.axes.plot(x,y,label="gamma")
         self.axes.legend(shadow=True)
         self.draw()
-        print("Finished Drawing Binomial Distribution")   
+        print("Finished Drawing Gamma Distribution")   
         
 class StatCalculator(QWidget):
 
@@ -143,6 +138,18 @@ class StatCalculator(QWidget):
         self.init_ui()
               
     def init_ui(self):
+#Menu Options          
+#        openfile = QAction(QIcon('Open-icon.png'),'&Open', self)
+#        openfile.setShortcut("Ctrl+O")
+#        openfile.setStatusTip("open a file")
+#        openfile.triggered.connect(self.get_address)
+#        self.statusBar()
+#        
+#        
+#        mainMenu = self.menuBar()
+#        file_menu = mainMenu.addMenu('&File')
+#        file_menu.addAction(openfile)        
+        
         #Builds GUI
         self.setGeometry(200,200,1000,500)
 
@@ -151,15 +158,10 @@ class StatCalculator(QWidget):
 #        self.run_button = QPushButton ('Analyze data', self)
 #        self.run_button.clicked.connect(self.compute_stats)
         
-#        openfile = QAction("Open a .csv file", self)
-#        openfile.setShortcut("Ctrl+O")
-#        openfile.setStatusTip("open a file")
-#        openfile.triggered.connect(self.get_address)
-#        
+      
         
-#        mainMenu = self.menuBar()
-#        file_menu = mainMenu.addMenu('&File')
-#        file_menu.addAction(openfile)
+
+        
      
         self.mean_label = QLabel("Mean: Not Computed Yet",self)
         self.std_label = QLabel("Std Dev: Not Computed Yet",self)
@@ -215,16 +217,16 @@ class StatCalculator(QWidget):
         self.normal_checkbox = QCheckBox('Normal Distribution',self)
         self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
         self.chi2_checkbox = QCheckBox('Chi^2 Distribution', self)
-        self.tukeylambda_checkbox = QCheckBox('Tukey Lambda Distribution', self)
-        self.binom_checkbox = QCheckBox('Binomial Distribution', self)
+        self.semi_checkbox = QCheckBox('Semi Circular Distribution', self)
+        self.gamma_checkbox = QCheckBox('Gamma Distribution', self)
         # We want to run the plotting routine for the distribution, but 
         # we need to know the statistical values, so we'll calculate statistics
         # first.
         self.normal_checkbox.stateChanged.connect(self.compute_stats)
         self.log_normal_checkbox.stateChanged.connect(self.compute_stats)
         self.chi2_checkbox.stateChanged.connect(self.compute_stats)
-        self.tukeylambda_checkbox.stateChanged.connect(self.compute_stats)
-        self.binom_checkbox.stateChanged.connect(self.compute_stats)        
+        self.semi_checkbox.stateChanged.connect(self.compute_stats)
+        self.gamma_checkbox.stateChanged.connect(self.compute_stats)        
         #Repeat for additional distributions.
         
         
@@ -233,8 +235,8 @@ class StatCalculator(QWidget):
         distribution_box_layout.addWidget(self.normal_checkbox)
         distribution_box_layout.addWidget(self.log_normal_checkbox)
         distribution_box_layout.addWidget(self.chi2_checkbox)
-        distribution_box_layout.addWidget(self.tukeylambda_checkbox)
-        distribution_box_layout.addWidget(self.binom_checkbox)
+        distribution_box_layout.addWidget(self.semi_checkbox)
+        distribution_box_layout.addWidget(self.gamma_checkbox)
         distribution_box.setLayout(distribution_box_layout)
 
         #Now we can set all the previously defined boxes into the main window
@@ -302,13 +304,13 @@ class StatCalculator(QWidget):
             data_array = np.asarray(item_list)
             mean_value = np.mean(data_array)
             stdev_value = np.std(data_array)
-#            standard_error = np.std(data_array)
-#            median= np.median(data_array)
-#            mode = statistics.mode(item_list)
-#            variance = np.var(data_array)
-#            kurtosis = scipy.stats.kurtosis(data_array)
-#            skew = scipy.stats.skew(data_array)
-#            data_range = np.ptp(data_array)
+            standard_error = np.std(data_array)
+            median= np.median(data_array)
+#            mode = np.mode(item_list)
+            variance = np.var(data_array)
+            kurtosis = scipy.stats.kurtosis(data_array)
+            skew = scipy.stats.skew(data_array)
+            data_range = np.ptp(data_array)
 #            minimum = np.amin(data_array)
 #            maximum = np.amax(data_array)
 #            summation = np.sum(data_array)
@@ -320,34 +322,39 @@ class StatCalculator(QWidget):
             print("Mean = {0:5f}".format(mean_value))
             self.mean_label.setText("Mean = {:0.3f}".format(mean_value))
             self.std_label.setText("Std Dev = {:0.4f}".format(stdev_value))
-#            self.stderr_label.setText("Std Error = {:0.3f}".format(standard_error))
-#            self.median_label.setText("Median = {:0.3f}".format(median))
+            self.stderr_label.setText("Std Error = {:0.3f}".format(standard_error))
+            self.median_label.setText("Median = {:0.3f}".format(median))
 #            self.mode_label.setText("Mode = {:0.3f}".format(mode))
-#            self.variance_label.setText("Variance = {:0.3f}".format(variance))
-#            self.kurtosis_label.setText("Kurtosis = {:0.3f}".format(kurtosis))
-#            self.skew_label.setText("Skew = {:0.3f}".format(skew))
-#            self.range_label.setText("Range = {:0.3f}".format(data_range))
+            self.variance_label.setText("Variance = {:0.3f}".format(variance))
+            self.kurtosis_label.setText("Kurtosis = {:0.3f}".format(kurtosis))
+            self.skew_label.setText("Skew = {:0.3f}".format(skew))
+            self.range_label.setText("Range = {:0.3f}".format(data_range))
 #            self.min_label.setText("Minimum = {:0.3f}".format(minimum))
 #            self.max_label.setText("Max = {:0.3f}".format(maximum))
 #            self.summation_label.setText("Sum = {:0.3f}".format(summation))
 #            self.count_label.setText("Count = {:0.3f}".format(count))
-#            
+            
             self.graph_canvas.plot_histogram(data_array)
             if self.normal_checkbox.isChecked():
                 self.graph_canvas.plot_normal(mean_value,stdev_value)
                 
             if self.log_normal_checkbox.isChecked():
-                self.graph_canvas.plot_lognormal(mean_value, stdev_value)
+                shape_, loc_, scale_ = lognorm.fit(data_array)
+                self.graph_canvas.plot_lognormal(mean_value, stdev_value, shape_, loc_, scale_)
                 #add more distributions here
         
             if self.chi2_checkbox.isChecked():
-                self.graph_canvas.plot_chi(mean_value, stdev_value)
+                df_, loc_, scale_ = stats.chi2.fit(data_array)
+                self.graph_canvas.plot_chi(mean_value, stdev_value, df_, loc_, scale_)
 
-            if self.tukeylambda_checkbox.isChecked():
-                self.graph_canvas.plot_tukeylambda(mean_value, stdev_value)
+            if self.semi_checkbox.isChecked():
+                loc_, scale_ = stats.semicircular.fit(data_array)
+                self.graph_canvas.plot_semicircular(mean_value, stdev_value, loc_, scale_)
 
-            if self.binom_checkbox.isChecked():
-                self.graph_canvas.plot_binom(mean_value, stdev_value)                
+
+            if self.gamma_checkbox.isChecked():
+                a_, loc_, scale_ = stats.gamma.fit(data_array)
+                self.graph_canvas.plot_gamma(mean_value, stdev_value, a_, loc_, scale_)                
 '''       
   1. Add the ability to plot a normalized Histogram of the selected data in the table.
   2. Add a menu option to open a CSV data file.
