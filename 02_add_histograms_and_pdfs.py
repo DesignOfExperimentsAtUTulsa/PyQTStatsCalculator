@@ -1,28 +1,45 @@
 #!/bin/env/python
-# An introduction sample source code for some basic statistics
-
-#Import 
-import sys
-from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
-                             QFileDialog, QLabel, QSlider, QCheckBox, 
-                             QLineEdit, QVBoxLayout, QApplication, QPushButton,
-                             QTableWidget, QTableWidgetItem,QSizePolicy,
-                             QGridLayout,QGroupBox)
-from PyQt5.QtCore import Qt, QTimer, QCoreApplication
-from PyQt5.QtGui import QIcon
+# An introduction graphing some probability density functions
+# 
+# Assignment 2 in ME7863: Design and Analysis of Experiments
+# Taught By Dr. Jeremy Daily
+# Orignially assigned Fall 2017
+#
+# This is a gentle introduction to programming using Python, numpy, scipy, and PyQt5
+# Examples from https://docs.scipy.org/doc/scipy/reference/tutorial/stats.html
+# Import modules 
+import sys,os
+from PyQt5.QtWidgets import (QMainWindow,
+                             QWidget,
+                             QFileDialog, 
+                             QLabel, 
+                             QCheckBox, 
+                             QVBoxLayout, 
+                             QApplication, 
+                             QPushButton,
+                             QTableWidget, 
+                             QTableWidgetItem,
+                             QGroupBox,
+                             QGridLayout,
+                             QSizePolicy)
+from PyQt5.QtCore import QCoreApplication
 
 import numpy as np
+#import the distributions to use
+from scipy.stats import norm
+from scipy.stats import lognorm
+# add more here
 
-import os
- 
+
 from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import rcParams
-import matplotlib.mlab as mlab
 
 rcParams.update({'figure.autolayout': True})
 
+#Add a class for matplotlib graphs
+# Code was inspired from the Internet
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -72,17 +89,28 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.legend(shadow=True)
         self.draw()
         print("Finished Drawing Normalized Histogram.")
-          
-    def plot_normal(self,mu,sigma):
+    
+    def plot_random_variable(self,data,rv):
+        data_mean = np.mean(data)
+        data_sigma = np.std(data)
         xmin,xmax = self.axes.get_xlim()
-        x = np.linspace(mu-3*sigma,mu+3*sigma, 100)
-        y = mlab.normpdf(x, mu, sigma)
-        self.axes.plot(x,y,label="Normal")
+        x = np.linspace(xmin,xmax, 100) #x = np.linspace(loc-3*scale,loc+3*scale, 100)
+        
+        if rv.name =='lognorm':
+          #s is the shape parameter
+          # See https://en.wikipedia.org/wiki/Log-normal_distribution
+          # and https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.lognorm.html#scipy.stats.lognorm
+          s = np.sqrt(np.log(1+data_sigma**2/data_mean**2))
+          #shift to only use positive numbers
+          y = rv.pdf(x,s,loc=0,scale=data_sigma)
+        else:
+          y = rv.pdf(x,loc=data_mean,scale=data_sigma)
+          
+        self.axes.plot(x,y,label=rv.name)
         self.axes.legend(shadow=True)
         self.draw()
-        print("Finished Drawing Normal Distribution.")
         
-class StatCalculator(QWidget):
+class StatCalculator(QMainWindow):
 
     def __init__(self):
         super().__init__()
@@ -92,7 +120,7 @@ class StatCalculator(QWidget):
               
     def init_ui(self):
         #Builds GUI
-        self.setGeometry(200,200,1000,500)
+        self.setGeometry(200,200,1000,700)
 
         self.load_button = QPushButton('Load Data',self)
         self.load_button.clicked.connect(self.load_data)
@@ -103,9 +131,9 @@ class StatCalculator(QWidget):
         #Set up a Table to display data
         self.data_table = QTableWidget()
         self.data_table.itemSelectionChanged.connect(self.compute_stats)
+        main_widget = QWidget()
         
-        self.main_widget = QWidget(self)
-        self.graph_canvas = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
+        self.graph_canvas = MyDynamicMplCanvas(main_widget, width=5, height=4, dpi=100)
         
         #Define where the widgets go in the window
         #We start by defining some boxes that we can arrange
@@ -140,6 +168,7 @@ class StatCalculator(QWidget):
         
         #Repeat for additional distributions.
         self.log_normal_checkbox = QCheckBox('Log-Normal Distribution',self)
+        self.log_normal_checkbox.stateChanged.connect(self.compute_stats)
         
         distribution_box = QGroupBox("Distribution Functions")
         distribution_box_layout= QVBoxLayout()
@@ -153,44 +182,52 @@ class StatCalculator(QWidget):
         grid_layout.addWidget(stats_box,1,0)
         grid_layout.addWidget(self.graph_canvas,0,1) 
         grid_layout.addWidget(distribution_box,1,1)
-        
-        self.setLayout(grid_layout)
-        
-        self.setWindowTitle('Introduction to Descriptive Statistics - Dr. Daily\'s Example')
-        self.activateWindow()
-        self.raise_()
+          
+        main_widget.setLayout(grid_layout)
+        self.setCentralWidget(main_widget)
+        self.setWindowTitle('Plotting Probability Density Functions - Dr. Daily\'s Example')
         self.show()
     
     def load_data(self):        
-       #for this example, we'll hard code the file name.
-       data_file_name = "Historical Temperatures from Moose Wyoming.csv"
-       header_row = 1 
-       #load data file into memory as a list of lines       
-       with open(data_file_name,'r') as data_file:
-            self.data_lines = data_file.readlines()
+        #for this example, we'll hard code the file name.
+        data_file_name = "Historical Temperatures from Moose Wyoming.csv"
+        #for the assignment, have a dialog box provide the filename
+
+        #check to see if the file exists and then load it
+        if os.path.exists(data_file_name):
+            header_row = 1 
+            #load data file into memory as a list of lines       
+            with open(data_file_name,'r') as data_file:
+                self.data_lines = data_file.readlines()
         
-       print("Opened {}".format(data_file_name))
-       print(self.data_lines[1:10]) #for debugging only
+            print("Opened {}".format(data_file_name))
+            print(self.data_lines[1:10])
         
-       #Set the headers
-       #parse the lines by stripping the newline character off the end
-       #and then splitting them on commas.
-       data_table_columns = self.data_lines[header_row].strip().split(',')
-       self.data_table.setColumnCount(len(data_table_columns))
-       self.data_table.setHorizontalHeaderLabels(data_table_columns)
+            #Set the headers
+            #parse the lines by stripping the newline character off the end
+            #and then splitting them on commas.
+            data_table_columns = self.data_lines[header_row].strip().split(',')
+            self.data_table.setColumnCount(len(data_table_columns))
+            self.data_table.setHorizontalHeaderLabels(data_table_columns)
+
+            #fill the table starting with the row after the header
+
+            for row in range(header_row+1, len(self.data_lines)):
+               #parse the data in memory into a list 
+               row_values = self.data_lines[row].strip().split(',')
+               #insert a new row
+               current_row = self.data_table.rowCount()
+               self.data_table.insertRow(current_row)
+               
+               #Populate the row with data
+               for col in range(len(data_table_columns)):
+                   entry = QTableWidgetItem("{}".format(row_values[col]))
+                   self.data_table.setItem(current_row,col,entry)
+            print("Filled {} rows.".format(row))
         
-       #fill the table starting with the row after the header
-       current_row = -1
-       for row in range(header_row+1, len(self.data_lines)):
-           row_values = (self.data_lines[row].strip().split(','))
-           current_row +=1
-           self.data_table.insertRow(current_row)
-           #Populate the row with data
-           for col in range(len(data_table_columns)):
-               entry = QTableWidgetItem("{}".format(row_values[col]))
-               self.data_table.setItem(current_row,col,entry)
-       print("Filled {} rows.".format(row))
-    
+        else:
+            print("File not found.")
+
     def compute_stats(self):
         
         #setup array
@@ -213,7 +250,9 @@ class StatCalculator(QWidget):
             
             self.graph_canvas.plot_histogram(data_array)
             if self.normal_checkbox.isChecked():
-                self.graph_canvas.plot_normal(mean_value,stdev_value)
+                self.graph_canvas.plot_random_variable(data_array,norm)
+            if self.log_normal_checkbox.isChecked():
+                self.graph_canvas.plot_random_variable(data_array,lognorm)
                 #add more distributions here
         
 '''       
