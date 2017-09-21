@@ -129,7 +129,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.draw()
         print("Finished Drawing Gamma Distribution")   
         
-class StatCalculator(QWidget):
+class StatCalculator(QMainWindow):
 
     def __init__(self):
         super().__init__()
@@ -139,16 +139,16 @@ class StatCalculator(QWidget):
               
     def init_ui(self):
 #Menu Options          
-#        openfile = QAction(QIcon('Open-icon.png'),'&Open', self)
-#        openfile.setShortcut("Ctrl+O")
-#        openfile.setStatusTip("open a file")
-#        openfile.triggered.connect(self.get_address)
-#        self.statusBar()
-#        
-#        
-#        mainMenu = self.menuBar()
-#        file_menu = mainMenu.addMenu('&File')
-#        file_menu.addAction(openfile)        
+        openfile = QAction(QIcon('Open-icon.png'),'&Open', self)
+        openfile.setShortcut("Ctrl+O")
+        openfile.setStatusTip("open a file")
+        openfile.triggered.connect(self.get_address)
+        self.statusBar()
+        
+        
+        mainMenu = self.menuBar()
+        file_menu = mainMenu.addMenu('&File')
+        file_menu.addAction(openfile)        
         
         #Builds GUI
         self.setGeometry(200,200,1000,500)
@@ -159,6 +159,7 @@ class StatCalculator(QWidget):
 #        self.run_button.clicked.connect(self.compute_stats)
         
       
+        main_widget = QWidget()
         
 
         
@@ -247,10 +248,9 @@ class StatCalculator(QWidget):
         grid_layout.addWidget(distribution_box,1,1)
         
         self.setLayout(grid_layout)
-        
+        main_widget.setLayout(grid_layout)
+        self.setCentralWidget(main_widget)
         self.setWindowTitle('Introduction to Descriptive Statistics - Justice Boisselle')
-        self.activateWindow()
-        self.raise_()
         self.show()
 
 
